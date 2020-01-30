@@ -1,6 +1,33 @@
 import time
 import random
 
+death = """
+                                          ,,,xxxx
+ ``''==xx#################xxxxx===---xxx##########
+                `''################################
+                   ####           ####P'
+--                ####            ####
+                ####              ####
+              ####`'=..           ####      ,#####
+          ,####      ###,,        ####,,==#####""'
+       ,###`'==        '####\     ####
+    ,,##`     ""###      ####     ####
+                 ####   ####      ####
+                   #######        ####
+                    ####          ####
+                  ####            ####
+                ####              ####            #
+            ,####'                ####           ##
+        ,####'                    #################
+    ,x##                            ##############
+    
+            ______ _____  ___ _____ _   _ 
+            |  _  \  ___|/ _ \_   _| | | |
+            | | | | |__ / /_\ \| | | |_| |
+            | | | |  __||  _  || | |  _  |
+            | |/ /| |___| | | || | | | | |
+            |___/ \____/\_| |_/\_/ \_| |_/"""
+
 
 class BaseGameEntity:
     entityID = 0
@@ -142,7 +169,7 @@ class 死(State):
         elif (miner.hunger >= 50):
             print("Died of hunger")
 
-        print("ROBERRRRRRRRTTTTTTTT")
+        print(death)
 
     def execute(self, miner):
         print("You're lying dead on the floor")
@@ -158,7 +185,10 @@ class Miner(BaseGameEntity):
 
     #Stats
     currentState = State()
-    location = ""
+    currentLocation = ""
+    #locdict = 
+    tired = False
+
 
     thirst = 0
     hunger = 0
@@ -184,6 +214,10 @@ class Miner(BaseGameEntity):
             self.changeState(GoToTravven())
         elif (self.hunger >= 30):
             self.changeState(DallasTorsdag())
+        elif (self.fatigue >=50):
+            #self.
+            pass
+
         elif (self.fatigue >= 70):
             self.changeState(ISleep())
 
@@ -209,10 +243,11 @@ class Miner(BaseGameEntity):
 def main():
     miner = Miner(1)
     miner.currentState = ISleep()
+    miner.thirst = 1000
     while (True):
-        miner.update()
-        time.sleep(0.5)
-        if (miner.currentState is None):
+       miner.update()
+       time.sleep(0.5)
+       if (miner.currentState is None):
             break
 
 
