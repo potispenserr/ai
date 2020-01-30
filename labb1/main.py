@@ -113,6 +113,26 @@ class GoToTravven(State):
     def exit(self, miner):
         print("God damn it, it's sista beställningen")
 
+class DallasTorsdag(State):
+    def enter(self, miner):
+        randint = random.randint(0,2)
+        if(randint == 0):
+            print("I'll get kebabtallrik extra allt today")
+        elif(randint == 1):
+            print("I'll get Superskrov today")
+        elif(randint == 2):
+            print("I'll take hawaii today")
+
+    def execute(self, miner):
+        print("Nom Nom Nom Nom")
+        miner.hunger -= 10
+        if(miner.hunger < 0):
+            miner.hunger = 0
+            miner.changeState(NuggetMining())
+
+    def exit(self, miner):
+        print("Always nice with some Dallas but time to get back to it")
+
 
 # Rip in kill
 class 死(State):
@@ -136,6 +156,7 @@ class Miner(BaseGameEntity):
     def __init__(self, ID):
         super().__init__(ID)
 
+    #Stats
     currentState = State()
     location = ""
 
@@ -149,16 +170,31 @@ class Miner(BaseGameEntity):
     pocketSize = 10
 
     def update(self):
-        self.thirst += 2
+        self.thirst += 3
         self.hunger += 1
         self.socialNeed += 1
+        self.fatigue += 1
+        #stat printers
         print("Miner ", self.entityID," thirst: ", self.thirst, " hunger: ", self.hunger)
         print("Miner ", self.entityID, " fatigue: ", self.fatigue, " social need: ", self.socialNeed)
+        print("Miner ", self.entityID, " NuggsCarried: ", self.nuggiesCarried, " Nuggies in the Bank: ", self.nuggiesInTheBank)
+
+        #Check if Death is imminent
+        if (self.thirst >= 55):
+            self.changeState(GoToTravven())
+        elif (self.hunger >= 30):
+            self.changeState(DallasTorsdag())
+        elif (self.fatigue >= 70):
+            self.changeState(ISleep())
+
         if (self.currentState):
-            if (self.thirst >= 50):
+            #Death states
+            if (self.thirst >= 70):
                 self.changeState(死())
-            elif (self.hunger >= 45):
+            elif (self.hunger >= 50):
                 self.changeState(死())
+
+            #execute current state
             self.currentState.execute(self)
 
     def changeState(self, newstate):
@@ -175,11 +211,6 @@ def main():
     miner.currentState = ISleep()
     while (True):
         miner.update()
-        if (miner.socialNeed >= 30):
-            print("Miner ", miner.entityID, "is lonely")
-        elif (miner.thirst >= 30):
-            miner.changeState(GoToTravven())
-        elif (miner.hunger >= 50)
         time.sleep(0.5)
         if (miner.currentState is None):
             break
