@@ -68,15 +68,20 @@ class ISleep(base.State):
         print("Alright let's get this bread")
 
 class SweetHome(base.State):
+    episodesCount = 0
 
     def enter(self, miner):
         print("My sweet home in Alabama")
 
     def execute(self, miner):
-        miner.changeState(ISleep())
+        self.episodesCount += 1 
+        print("I going to watch that Netflix show i've been putting off")
+
+        if(self.episodesCount == 7):
+            miner.changeState(ISleep())
 
     def exit(self, miner):
-        print("Back to the grind")
+        print("Time to stop watching Netflix")
 
 
 # Mad Bank YO
@@ -140,6 +145,7 @@ class DallasTorsdag(base.State):
 # Rip in kill
 class YouDied(base.State):
     def enter(self, miner):
+        miner.currentLocation = miner.locdict.get("Death")
         if (miner.thirst >= 50):
             print("Died of dehydration")
         elif (miner.hunger >= 50):
@@ -162,7 +168,13 @@ class Miner(base.BaseGameEntity):
     #Stats
     currentState = ISleep()
     currentLocation = ""
-    loclist = ["Travven", "Home", "Dallas", "Hell?", "NuggetMine", "Bank"]
+    locdict = {
+        "Food":"Dallas"
+        "SweetAlabama": "Home"
+        "Death":"Hell?"
+        "Work":"NuggetMine"
+        "Cash":"Bank"
+    }
     currentTime = 0
 
 
@@ -194,19 +206,20 @@ class Miner(base.BaseGameEntity):
         #Check if Death is imminent
         if (self.thirst >= 55):
             self.changeState(GoToTravven())
+
         elif (self.hunger >= 30):
             self.changeState(DallasTorsdag())
-        elif (self.fatigue >=50):
-            self.changeState(ISleep())
 
+        elif (self.fatigue >=50):
+            self.changeState(SweetHome())
         elif (self.fatigue >= 70):
             self.changeState(ISleep())
 
         if (self.currentState):
             #Death states
-            if (self.thirst >= 70):
+            if (self.thirst >= 100):
                 self.changeState(YouDied())
-            elif (self.hunger >= 50):
+            elif (self.hunger >= 100):
                 self.changeState(YouDied())
 
             #execute current state
@@ -225,7 +238,7 @@ class Miner(base.BaseGameEntity):
 
 def main():
     miner = Miner(1)
-    
+    miner.fatigue = 40
     while (True):
        miner.update()
        time.sleep(0.5)
