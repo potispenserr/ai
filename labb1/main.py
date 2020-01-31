@@ -1,5 +1,6 @@
 import time
 import random
+import baseClasses as base
 
 death = """
                                           ,,,xxxx
@@ -28,51 +29,17 @@ death = """
             | |/ /| |___| | | || | | | | |
             |___/ \____/\_| |_/\_/ \_| |_/"""
 
-
-class BaseGameEntity:
-    entityID = 0
-    nextValidID = 1
-
-    def __init__(self, val):
-        self.entityID = val
-        self.nextValidID = val + 1
-
-    def update(self):
-        raise NotImplementedError("pls implement me :(")
-
-
-# Base State class
-class State:
-
-    def enter(self, miner):
-        print("Enter the gungeon")
-        raise NotImplementedError("plizz ipmelemnt me :/")
-
-    def execute(self, miner):
-        print("YOU HAVE BEEN EXECUTED")
-        raise NotImplementedError("plizz ipmelemnt me :/")
-
-    def exit(self, miner):
-        print("Escaped from tarkob")
-        raise NotImplementedError("plizz ipmelemnt me :/")
-
-
 # Work mining
-class NuggetMining(State):
-    def __new__(cls):
-        if not hasattr(cls, 'instance') or not cls.instance:
-            cls.instance = super().__new__(cls)
-
-        return cls.instance
+class NuggetMining(base.State):
 
     def enter(self, miner):
-        if (miner.location != "nuggetmine"):
+        if (miner.currentLocation != "nuggetmine"):
             print("gonna get me some nuggies")
-            miner.location = "nuggetmine"
+            miner.currentLocation = "nuggetmine"
 
     def execute(self, miner):
         miner.nuggiesCarried += 1
-        miner.fatigue += 3
+        miner.fatigue += 2
         print("gettin' them Nugg Nuggz")
         print("thirst: ", miner.thirst)
 
@@ -85,7 +52,8 @@ class NuggetMining(State):
 
 
 # Sleep
-class ISleep(State):
+class ISleep(base.State):
+
     def enter(self, miner):
         print("I'm so tired... I'm going to rest for a bit")
 
@@ -97,16 +65,22 @@ class ISleep(State):
             miner.changeState(NuggetMining())
 
     def exit(self, miner):
-        print("Let's get this bread")
+        print("Alright let's get this bread")
+
+class SweetHome(base.State):
+
+    def enter(self, miner):
+        print("My sweet home in Alabama")
+
+    def execute(self, miner):
+        miner.changeState(ISleep())
+
+    def exit(self, miner):
+        print("Back to the grind")
 
 
 # Mad Bank YO
-class PushForceBank(State):
-    def __new__(cls):
-        if not hasattr(cls, 'instance') or not cls.instance:
-            cls.instance = super().__new__(cls)
-
-        return cls.instance
+class PushForceBank(base.State):
 
     def enter(self, miner):
         print("We want to hurt no one. We're here for the bank's money, not your money.")
@@ -115,14 +89,16 @@ class PushForceBank(State):
         print("Let's drill the safe")
         miner.nuggiesCarried -= 2
         miner.nuggiesInTheBank += 2
-        if(miner.nuggiesCarried == 0):
+        if(miner.nuggiesCarried <= 0):
+            miner.nuggiesCarried = 0
             miner.changeState(NuggetMining())
 
     def exit(self, miner):
         print("Alright let's get the fuck outta here")
 
 
-class GoToTravven(State):
+class GoToTravven(base.State):
+
     def enter(self, miner):
         randint = random.randint(0,1)
         if(randint == 0):
@@ -140,7 +116,7 @@ class GoToTravven(State):
     def exit(self, miner):
         print("God damn it, it's sista beställningen")
 
-class DallasTorsdag(State):
+class DallasTorsdag(base.State):
     def enter(self, miner):
         randint = random.randint(0,2)
         if(randint == 0):
@@ -162,32 +138,32 @@ class DallasTorsdag(State):
 
 
 # Rip in kill
-class 死(State):
+class YouDied(base.State):
     def enter(self, miner):
         if (miner.thirst >= 50):
             print("Died of dehydration")
         elif (miner.hunger >= 50):
             print("Died of hunger")
 
-        print(death)
 
     def execute(self, miner):
-        print("You're lying dead on the floor")
+        print(death)
+        #print("You're lying dead on the floor")
         miner.currentState = None
 
     def exit(self, miner):
         print("Guess who's back, back again")
 
 
-class Miner(BaseGameEntity):
+class Miner(base.BaseGameEntity):
     def __init__(self, ID):
         super().__init__(ID)
 
     #Stats
-    currentState = State()
+    currentState = ISleep()
     currentLocation = ""
-    #locdict = 
-    tired = False
+    loclist = ["Travven", "Home", "Dallas", "Hell?", "NuggetMine", "Bank"]
+    currentTime = 0
 
 
     thirst = 0
@@ -200,11 +176,17 @@ class Miner(BaseGameEntity):
     pocketSize = 10
 
     def update(self):
-        self.thirst += 3
+        self.thirst += 2
         self.hunger += 1
         self.socialNeed += 1
         self.fatigue += 1
+        self.currentTime += 1
+
+        if(self.currentTime > 23):
+            self.currentTime = 0
+
         #stat printers
+        print(self.currentTime,":00")
         print("Miner ", self.entityID," thirst: ", self.thirst, " hunger: ", self.hunger)
         print("Miner ", self.entityID, " fatigue: ", self.fatigue, " social need: ", self.socialNeed)
         print("Miner ", self.entityID, " NuggsCarried: ", self.nuggiesCarried, " Nuggies in the Bank: ", self.nuggiesInTheBank)
@@ -215,8 +197,7 @@ class Miner(BaseGameEntity):
         elif (self.hunger >= 30):
             self.changeState(DallasTorsdag())
         elif (self.fatigue >=50):
-            #self.
-            pass
+            self.changeState(ISleep())
 
         elif (self.fatigue >= 70):
             self.changeState(ISleep())
@@ -224,12 +205,14 @@ class Miner(BaseGameEntity):
         if (self.currentState):
             #Death states
             if (self.thirst >= 70):
-                self.changeState(死())
+                self.changeState(YouDied())
             elif (self.hunger >= 50):
-                self.changeState(死())
+                self.changeState(YouDied())
 
             #execute current state
             self.currentState.execute(self)
+
+        
 
     def changeState(self, newstate):
         print("changing state")
@@ -242,8 +225,7 @@ class Miner(BaseGameEntity):
 
 def main():
     miner = Miner(1)
-    miner.currentState = ISleep()
-    miner.thirst = 1000
+    
     while (True):
        miner.update()
        time.sleep(0.5)
