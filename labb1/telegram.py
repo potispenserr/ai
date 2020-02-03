@@ -4,3 +4,9 @@ class Telegram:
     msg = ""
     dispatchTime = 0
     extraInfo = ""
+    def __init__(self, sender, reciever, msg, dispatchtime, extrainfo):
+        self.sender = sender
+        self.reciever = reciever 
+        self.msg = msg
+        self.dispatchTime = dispatchtime
+        self.extraInfo = extrainfo

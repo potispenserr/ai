@@ -247,7 +247,8 @@ class Miner(base.BaseGameEntity):
 
     #Where everything happens
     def update(self):
-        
+
+        #if currentState is not None
         if (self.currentState):
             self.thirst += 2
             self.hunger += 1
@@ -286,16 +287,10 @@ class Miner(base.BaseGameEntity):
                 self.changeState(YouDied())
             #execute current state
             self.currentState.execute(self)
+    
+        #If currentState is None check if miner has previous state 
         elif(self.previousState):
             self.revertToPreviousState()
-
-
-
-        
-
-        
-
-        
 
     def changeState(self, newstate):
         self.currentState.exit(self)
@@ -321,8 +316,6 @@ def main():
     minerlist = []
     minerlist.append(Miner(1, "Sven"))
     minerlist.append(Miner(2, "Steffe"))
-    minerlist[1].hunger = 1000
-    minerlist[0].hunger = 1000
     
 
     while (True):
