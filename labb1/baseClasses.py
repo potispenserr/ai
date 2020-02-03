@@ -3,7 +3,7 @@ class BaseGameEntity:
     nextValidID = 2
 
     def __init__(self, val):
-        if(val >= self.nextValidID):
+        if(val > self.nextValidID):
             raise IndexError("Invalid entityID")
         else:
             self.entityID = val
