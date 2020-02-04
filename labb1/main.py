@@ -1,6 +1,7 @@
 import time
 import random
 import baseClasses as base
+import clock as clk
 
 death = """
                                           ,,,xxxx
@@ -230,7 +231,6 @@ class Miner(base.BaseGameEntity):
     currentState = ISleep()
     currentLocation = ""
     loclist = ("Hell?", "Dallas", "Travven", "Home", "Bank", "Mine", "CallCenter", "Store")
-    currentTime = 8
     interruptableState = True
     dead = False
 
@@ -254,20 +254,15 @@ class Miner(base.BaseGameEntity):
             self.hunger += 1
             self.socialNeed += 1
             self.fatigue += 1
-            self.currentTime += 1
-
-            if(self.currentTime > 23):
-                self.currentTime = 0
 
             #stat printers
-            print(self.currentTime,":00")
             #print("Miner ", self.entityID," thirst: ", self.thirst, " hunger: ", self.hunger)
             #print("Miner ", self.entityID, " fatigue: ", self.fatigue, " social need: ", self.socialNeed)
             #print("Miner ", self.entityID, " moneyCarried: ", self.moneyCarried, " Money in the Bank: ", self.moneyInTheBank)
             print(self.name, "Has Tools: ", self.hasTools)
 
             if(self.hasTools == False and self.moneyInTheBank >= 10):
-                if(self.currentTime > 8 and self.currentTime < 19):
+                if(clk.clock.currentHour > 8 and clk.clock.currentHour < 19):
                     self.changeState(Store())
 
             if(self.interruptableState == True):
@@ -278,8 +273,8 @@ class Miner(base.BaseGameEntity):
                 elif (self.hunger >= 30):
                     self.changeState(DallasTorsdag())
 
-            elif (self.fatigue >= 50):
-                self.changeState(ISleep())
+                elif (self.fatigue >= 50):
+                    self.changeState(ISleep())
             #Death states
             if (self.thirst >= 50):
                 self.changeState(YouDied())
@@ -316,9 +311,10 @@ def main():
     minerlist = []
     minerlist.append(Miner(1, "Sven"))
     minerlist.append(Miner(2, "Steffe"))
-    
 
     while (True):
+        clk.clock.tick()
+        clk.clock.printTime()
         
         for miner in minerlist:
             if(miner.dead is True):
@@ -330,6 +326,7 @@ def main():
         
         for miner in minerlist:
             miner.update()
+            print("\n")
 
         time.sleep(1)
         
