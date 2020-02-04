@@ -37,7 +37,7 @@ class NuggetMining(base.State):
         print("Fatigue: ", miner.fatigue)
         if (miner.currentLocation != "Mine"):
             print(miner.name, ": gonna get me some nuggies")
-            miner.currentLocation = "nuggetmine"
+            miner.currentLocation = "Mine"
 
     def execute(self, miner):
         if (miner.moneyCarried >= miner.pocketSize):
@@ -65,7 +65,7 @@ class NuggetMining(base.State):
 class CallCenter(base.State):
     def enter(self, miner):
         print(miner.name, ":Where is my cubicle now again?")
-        miner.currentLocation = "Office"
+        miner.currentLocation = "CallCenter"
     
     def execute(self, miner):
         print(miner.name, ":Rude people on the line, why am i not surprised")
@@ -185,6 +185,7 @@ class DallasTorsdag(base.State):
 class Store(base.State):
     def enter(self, miner):
         print(miner.name, ":Time to get a pickaxe so i can mine chicken nuggets")
+        miner.currentLocation = "Store"
 
     def execute(self, miner):
         print(miner.name, ":I got the pickaxe, now Im going to check it out")
@@ -305,6 +306,13 @@ class Miner(base.BaseGameEntity):
     def revertToPreviousState(self):
         if(self.previousState):
             self.changeState(self.previousState)
+
+    def handleMessage(self, msg):
+        if(self.currentState and self.currentState.onMessage(msg)):
+            return True
+
+        return False
+        
 
 
 def main():

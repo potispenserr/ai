@@ -9,6 +9,10 @@ class Clock:
         if(self.currentHour > 23):
             self.currentHour = 0
     
+    def timeNow(self):
+        return self.currentHour
+
+    
     def printTime(self):
         print(self.currentHour,":00",sep="")
 clock = Clock()

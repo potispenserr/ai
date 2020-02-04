@@ -1,6 +1,8 @@
 import entityManager
 import baseClasses as base
 import telegram as tele
+import clock as clk
+from collections import deque
 class MessageDispatcher:
     def __new__(cls):
         if not hasattr(cls, 'instance') or not cls.instance:
@@ -14,11 +16,19 @@ class MessageDispatcher:
         pReciever = self.entityMgr.getEntityFromID(sender)
 
         telegram = tele.Telegram(sender, reciever, msg, 0, extrainfo)
-
-        self.discharge(reciever, telegram)
+        if(delay <= 0):
+            self.discharge(reciever, telegram)
+        
+        else:
+            telegram.dispatchTime = clk.clock.timeNow + delay
+            self.msgqueue.append(telegram)
 
     def dispatchDelayedMessages(self):
-        pass
+        for msg in self.msgqueue:
+            if (msg.dispatchTime < clk.clock.timeNow and msg.dispatchTime > 0):
+                reciever = self.entityMgr.getEntityFromID(msg.reciever)
+                self.discharge(reciever, msg)
+                self.msgqueue.pop(0)
 
 
     def discharge(self, reciever, telegram):

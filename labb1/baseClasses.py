@@ -12,6 +12,10 @@ class BaseGameEntity:
     def update(self):
         raise NotImplementedError("pls implement me :(")
 
+    def handleMessage(self, msg):
+        print("YOU CAN'T HANDLE THE TRUTH")
+        raise NotImplementedError("pl0x impelement me ):")
+
 # Base State class
 class State:
     def __new__(cls):
@@ -30,3 +34,7 @@ class State:
     def exit(self):
         print("Escaped from tarkob")
         raise NotImplementedError("plizz ipmelemnt me :/")
+
+    def onMessage(self, msg):
+        print("YOU CAN'T HANDLE THE TRUTH")
+        raise NotImplementedError("ples ioement me")
