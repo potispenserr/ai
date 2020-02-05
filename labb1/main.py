@@ -2,6 +2,8 @@ import time
 import random
 import baseClasses as base
 import clock as clk
+import entityManager as em
+import messageDispatcher as md
 
 death = """
                                           ,,,xxxx
@@ -38,6 +40,7 @@ class NuggetMining(base.State):
         if (miner.currentLocation != "Mine"):
             print(miner.name, ": gonna get me some nuggies")
             miner.currentLocation = "Mine"
+            md.dispatcher.dispatchMessage(0,miner.entityID,miner.entityID + 1,"fuck your bitch ass nigga")
 
     def execute(self, miner):
         if (miner.moneyCarried >= miner.pocketSize):
@@ -62,6 +65,9 @@ class NuggetMining(base.State):
         else:
             print(miner.name, ":I'm done working, time to do something else")
 
+    def onMessage(self, miner):
+        pass
+
 class CallCenter(base.State):
     def enter(self, miner):
         print(miner.name, ":Where is my cubicle now again?")
@@ -80,6 +86,11 @@ class CallCenter(base.State):
     def exit(self, miner):
         print("Fatigue: ", miner.fatigue)
         print(miner.name, ":I've just about had it with rude people on the phone asking stupid shit")
+
+    def onMessage(self, telegram):
+        minerEntity = em.entityMgr.getEntityFromID(telegram.sender)
+        print("ey b0ss fuk u mang")
+        print(minerEntity.name, "jij bent een vieze vuile teringlijer")
 
 
 
@@ -105,6 +116,11 @@ class ISleep(base.State):
 
     def exit(self, miner):
         print(miner.name, ":Alright let's get this bread")
+    
+    def onMessage(self, telegram):
+        minerEntity = em.entityMgr.getEntityFromID(telegram.sender)
+        print("ey b0ss fuk u mang")
+        print(minerEntity.name, "jij bent een vieze vuile teringlijer")
 
 """class SweetHome(base.State):
     def enter(self, miner):
@@ -136,6 +152,9 @@ class PushForceBank(base.State):
     def exit(self, miner):
         print(miner.name, ":Alright let's get outta here")
         print(miner.name, ":Money in bank: ", miner.moneyCarried)
+    
+    def onMessage(self, miner):
+        pass
 
 
 class GoToTravven(base.State):
@@ -158,6 +177,9 @@ class GoToTravven(base.State):
 
     def exit(self, miner):
         print(miner.name, ":God damn it, it's sista beställningen")
+    
+    def onMessage(self, miner):
+        pass
 
 class DallasTorsdag(base.State):
     def enter(self, miner):
@@ -181,6 +203,9 @@ class DallasTorsdag(base.State):
     def exit(self, miner):
         print(miner.name, ":Always nice with some Dallas but time to get back to it")
         print("Hunger: ", miner.hunger)
+
+    def onMessage(self, miner):
+        pass
 
 class Store(base.State):
     def enter(self, miner):
@@ -307,11 +332,12 @@ class Miner(base.BaseGameEntity):
         if(self.previousState):
             self.changeState(self.previousState)
 
-    def handleMessage(self, msg):
-        if(self.currentState and self.currentState.onMessage(msg)):
-            return True
+    def handleMessage(self, telegram):
+        if(self.currentState and self.currentState.onMessage(telegram)):
+            print(telegram.sender, "discharged a message for", telegram.reciever, "at time", clk.clock.timeNowFormat(), "with the message", telegram.msg, "extra info:", telegram.extraInfo)
+            self.currentState.onMessage(telegram)
 
-        return False
+        #return False
         
 
 
@@ -319,10 +345,17 @@ def main():
     minerlist = []
     minerlist.append(Miner(1, "Sven"))
     minerlist.append(Miner(2, "Steffe"))
+    for miner in minerlist:
+        em.entityMgr.registerEntity(miner)
+    #md.dispatcher.dispatchMessage(2,minerlist[0].entityID,minerlist[1].entityID,"kanker kut", "tering")
+    minerlist[0].hasTools = True
+
+    
 
     while (True):
         clk.clock.tick()
         clk.clock.printTime()
+        minerlist[1].moneyInTheBank = 0
         
         for miner in minerlist:
             if(miner.dead is True):

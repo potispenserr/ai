@@ -1,17 +1,12 @@
 import baseClasses as base
 
-class EntityManager:
-    def __new__(cls):
-        if not hasattr(cls, 'instance') or not cls.instance:
-            cls.instance = super().__new__(cls)
-        return cls.instance
-        
+class EntityManager:    
     entityDict = {
 
     }
 
     def registerEntity(self,baseEntity):
-        self.entityDict[baseEntity.entityID] = baseEntity()
+        self.entityDict[baseEntity.entityID] = baseEntity
 
     def getEntityFromID(self, id):
         if id in self.entityDict:
@@ -21,3 +16,9 @@ class EntityManager:
 
     def removeEntity(self, id):
         self.entityDict.pop(id)
+
+    def printEntityDict(self):
+        for elem in self.entityDict.values():
+            print(elem.name)
+
+entityMgr = EntityManager()

@@ -36,5 +36,5 @@ class State:
         raise NotImplementedError("plizz ipmelemnt me :/")
 
     def onMessage(self, msg):
-        print("YOU CAN'T HANDLE THE TRUTH")
+        print("YOU CAN'T HANDLE THE TRUTH", self)
         raise NotImplementedError("ples ioement me")

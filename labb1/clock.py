@@ -11,6 +11,9 @@ class Clock:
     
     def timeNow(self):
         return self.currentHour
+    
+    def timeNowFormat(self):
+        return str(self.currentHour) + ":00"
 
     
     def printTime(self):

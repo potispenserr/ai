@@ -1,8 +1,7 @@
-import entityManager
+import entityManager as em
 import baseClasses as base
 import telegram as tele
 import clock as clk
-from collections import deque
 class MessageDispatcher:
     def __new__(cls):
         if not hasattr(cls, 'instance') or not cls.instance:
@@ -10,26 +9,33 @@ class MessageDispatcher:
         return cls.instance
 
     msgqueue = []
-    entityMgr = entityManager.EntityManager
+    #entityMgr = entityManager.EntityManager
 
-    def dispatchMessage(self, delay, sender, reciever, msg, extrainfo):
-        pReciever = self.entityMgr.getEntityFromID(sender)
+    def dispatchMessage(self, delay, sender, reciever, msg, extrainfo = None):
+        recieverEntity = em.entityMgr.getEntityFromID(reciever)
+        print("dispatching message")
 
-        telegram = tele.Telegram(sender, reciever, msg, 0, extrainfo)
-        if(delay <= 0):
-            self.discharge(reciever, telegram)
-        
+        if(recieverEntity is None):
+            print("Warning! No reciever has the ID: ", reciever)
+            
         else:
-            telegram.dispatchTime = clk.clock.timeNow + delay
-            self.msgqueue.append(telegram)
+            telegram = tele.Telegram(sender, reciever, msg, 0, extrainfo)
+            if(delay <= 0):
+                self.discharge(recieverEntity, telegram)
+            
+            else:
+                telegram.dispatchTime = clk.clock.timeNow() + delay
+                self.msgqueue.append(telegram)
 
     def dispatchDelayedMessages(self):
         for msg in self.msgqueue:
-            if (msg.dispatchTime < clk.clock.timeNow and msg.dispatchTime > 0):
-                reciever = self.entityMgr.getEntityFromID(msg.reciever)
+            if (msg.dispatchTime <= clk.clock.timeNow() and msg.dispatchTime > 0):
+                reciever = em.entityMgr.getEntityFromID(msg.reciever)
                 self.discharge(reciever, msg)
                 self.msgqueue.pop(0)
 
 
     def discharge(self, reciever, telegram):
-        pass
+        print("discharging message")
+        reciever.handleMessage(telegram)
+dispatcher = MessageDispatcher()
