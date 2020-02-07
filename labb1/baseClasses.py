@@ -35,6 +35,6 @@ class State:
         print("Escaped from tarkob")
         raise NotImplementedError("plizz ipmelemnt me :/")
 
-    def onMessage(self, msg):
+    def onMessage(self, telegram):
         print("YOU CAN'T HANDLE THE TRUTH", self)
         raise NotImplementedError("ples ioement me")

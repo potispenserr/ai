@@ -25,6 +25,7 @@ class MessageDispatcher:
             
             else:
                 telegram.dispatchTime = clk.clock.timeNow() + delay
+                print("Dispatch time:",telegram.dispatchTime)
                 self.msgqueue.append(telegram)
 
     def dispatchDelayedMessages(self):
@@ -35,7 +36,9 @@ class MessageDispatcher:
                 self.msgqueue.pop(0)
 
 
-    def discharge(self, reciever, telegram):
+    def discharge(self, recieverEntity, telegram):
+        #print(telegram.sender, "discharged a message for", telegram.reciever, "at time", clk.clock.timeNowFormat(), "with the message", telegram.msg, "extra info:", telegram.extraInfo)
         print("discharging message")
-        reciever.handleMessage(telegram)
+        print(em.entityMgr.getNameFromID(telegram.sender), "said", telegram.msg, "to",recieverEntity.name, "with extra info", telegram.extraInfo)
+        recieverEntity.handleMessage(telegram)
 dispatcher = MessageDispatcher()

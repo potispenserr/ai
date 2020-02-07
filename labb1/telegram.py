@@ -10,3 +10,5 @@ class Telegram:
         self.msg = msg
         self.dispatchTime = dispatchtime
         self.extraInfo = extrainfo
+    def printTelegram(self):
+        print("Sender:", self.sender, "Reciever", self.reciever, "Message: ", self.msg, "DispatchTime:", self.dispatchTime, "ExtraInfo: ", self.extraInfo)

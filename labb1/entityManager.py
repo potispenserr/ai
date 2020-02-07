@@ -14,6 +14,10 @@ class EntityManager:
         else:
             print("ID is not registered")
 
+    def getNameFromID(self, id):
+        if id in self.entityDict:
+            return self.entityDict[id].name
+
     def removeEntity(self, id):
         self.entityDict.pop(id)
 

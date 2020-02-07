@@ -4,6 +4,7 @@ import baseClasses as base
 import clock as clk
 import entityManager as em
 import messageDispatcher as md
+import telegram as tele
 
 death = """
                                           ,,,xxxx
@@ -40,7 +41,7 @@ class NuggetMining(base.State):
         if (miner.currentLocation != "Mine"):
             print(miner.name, ": gonna get me some nuggies")
             miner.currentLocation = "Mine"
-            md.dispatcher.dispatchMessage(0,miner.entityID,miner.entityID + 1,"fuck your bitch ass nigga")
+            md.dispatcher.dispatchMessage(0,miner.entityID,miner.entityID + 1,"MeetupRequest","18")
 
     def execute(self, miner):
         if (miner.moneyCarried >= miner.pocketSize):
@@ -65,7 +66,7 @@ class NuggetMining(base.State):
         else:
             print(miner.name, ":I'm done working, time to do something else")
 
-    def onMessage(self, miner):
+    def onMessage(self, telegram):
         pass
 
 class CallCenter(base.State):
@@ -88,9 +89,7 @@ class CallCenter(base.State):
         print(miner.name, ":I've just about had it with rude people on the phone asking stupid shit")
 
     def onMessage(self, telegram):
-        minerEntity = em.entityMgr.getEntityFromID(telegram.sender)
-        print("ey b0ss fuk u mang")
-        print(minerEntity.name, "jij bent een vieze vuile teringlijer")
+        return False
 
 
 
@@ -118,9 +117,8 @@ class ISleep(base.State):
         print(miner.name, ":Alright let's get this bread")
     
     def onMessage(self, telegram):
-        minerEntity = em.entityMgr.getEntityFromID(telegram.sender)
-        print("ey b0ss fuk u mang")
-        print(minerEntity.name, "jij bent een vieze vuile teringlijer")
+        minerName = em.entityMgr.getNameFromID(telegram.sender)
+        print("To ",minerName, ":" " ey b0ss rot op man", sep="")
 
 """class SweetHome(base.State):
     def enter(self, miner):
@@ -153,8 +151,8 @@ class PushForceBank(base.State):
         print(miner.name, ":Alright let's get outta here")
         print(miner.name, ":Money in bank: ", miner.moneyCarried)
     
-    def onMessage(self, miner):
-        pass
+    def onMessage(self, telegram):
+        return False
 
 
 class GoToTravven(base.State):
@@ -178,8 +176,8 @@ class GoToTravven(base.State):
     def exit(self, miner):
         print(miner.name, ":God damn it, it's sista beställningen")
     
-    def onMessage(self, miner):
-        pass
+    def onMessage(self, telegram):
+        return False
 
 class DallasTorsdag(base.State):
     def enter(self, miner):
@@ -204,8 +202,8 @@ class DallasTorsdag(base.State):
         print(miner.name, ":Always nice with some Dallas but time to get back to it")
         print("Hunger: ", miner.hunger)
 
-    def onMessage(self, miner):
-        pass
+    def onMessage(self, telegram):
+        return False
 
 class Store(base.State):
     def enter(self, miner):
@@ -220,21 +218,26 @@ class Store(base.State):
 
     def exit(self, miner):
         print(miner.name, ":This pickaxe cost me a pretty penny so i sure hope it was worth it")
+    
+    def onMessage(self, telegram):
+        return False
 
 
 # Rip in kill
 class YouDied(base.State):
     def enter(self, miner):
         miner.currentLocation = "Hell?"
-        if (miner.thirst >= 50):
-            print(miner.name, ":Died of dehydration")
-        elif (miner.hunger >= 50):
-            print(miner.name, ":Died of hunger")
-        
 
 
     def execute(self, miner):
         print(death)
+        if (miner.thirst >= 50):
+            print("Dehydration")
+        elif (miner.hunger >= 50):
+            print("Hunger")
+        elif (miner.socialNeed >= 100):
+            #print("It's just not worth it anymore :/")
+            print("Lonelyness")
         #print("You're lying dead on the floor")
         miner.currentState = None
         miner.previousState = None
@@ -244,17 +247,50 @@ class YouDied(base.State):
     def exit(self, miner):
         print(miner.name, ":Guess who's back, back again")
 
+    def onMessage(self, telegram):
+        return False
+
+class GlobalState(base.State):
+    def enter(self, miner):
+        pass
+    def execute(self, miner):
+        pass
+    def exit(self, miner):
+        pass
+    def onMessage(self, telegram, miner):
+        #telegram.printTelegram()
+        if(telegram.msg == "MeetupRequest"):
+            print(abs(clk.clock.timeNow() - int(telegram.extraInfo)))
+            messageDelay = abs(clk.clock.timeNow() - int(telegram.extraInfo))
+            print("MessageDelay:", messageDelay)
+            md.dispatcher.dispatchMessage(messageDelay,miner.entityID,miner.entityID,"MeetupAck")
+            print("Message queue:",md.dispatcher.msgqueue)
+        if(telegram.msg == "MeetupAck"):
+            print("NOGGERS WITH AN ATTITUDE")
+        
+            
+
 
 class Miner(base.BaseGameEntity):
     def __init__(self, ID, minername):
         super().__init__(ID)
         self.name = minername
+        self.thirst = random.randint(0,15)
+        self.hunger = random.randint(0,15)
+        self.fatigue = random.randint(0,15)
+        self.socialNeed = random.randint(0,35)
+
+        self.moneyCarried = 0
+        self.moneyInTheBank = random.randint(0,30)
+        self.pocketSize = random.randint(10,20)
+        self.hasTools = bool(random.randint(0,1))
 
 
     #Stats
     name = ""
     previousState = None
     currentState = ISleep()
+    globalState = GlobalState()
     currentLocation = ""
     loclist = ("Hell?", "Dallas", "Travven", "Home", "Bank", "Mine", "CallCenter", "Store")
     interruptableState = True
@@ -282,13 +318,13 @@ class Miner(base.BaseGameEntity):
             self.fatigue += 1
 
             #stat printers
-            #print("Miner ", self.entityID," thirst: ", self.thirst, " hunger: ", self.hunger)
-            #print("Miner ", self.entityID, " fatigue: ", self.fatigue, " social need: ", self.socialNeed)
-            #print("Miner ", self.entityID, " moneyCarried: ", self.moneyCarried, " Money in the Bank: ", self.moneyInTheBank)
-            print(self.name, "Has Tools: ", self.hasTools)
+            #print("Miner ", self.name," thirst: ", self.thirst, " hunger: ", self.hunger)
+            print("Miner ", self.name, " fatigue: ", self.fatigue, " social need: ", self.socialNeed)
+            #print(self.name, " moneyCarried: ", self.moneyCarried, " Money in the Bank: ", self.moneyInTheBank)
+            #print(self.name, "Has Tools: ", self.hasTools)
 
             if(self.hasTools == False and self.moneyInTheBank >= 10):
-                if(clk.clock.currentHour > 8 and clk.clock.currentHour < 19):
+                if(clk.clock.timeNow() > 8 and clk.clock.timeNow() < 19):
                     self.changeState(Store())
 
             if(self.interruptableState == True):
@@ -305,6 +341,8 @@ class Miner(base.BaseGameEntity):
             if (self.thirst >= 50):
                 self.changeState(YouDied())
             elif (self.hunger >= 50):
+                self.changeState(YouDied())
+            elif(self.socialNeed >= 100):
                 self.changeState(YouDied())
             #execute current state
             self.currentState.execute(self)
@@ -326,6 +364,15 @@ class Miner(base.BaseGameEntity):
             self.changeState(NuggetMining())
         else:
             self.changeState(CallCenter())
+    
+    def hungry(self):
+        pass
+
+    def thirsty(self):
+        pass
+
+    def tired(self):
+        pass
 
 
     def revertToPreviousState(self):
@@ -333,11 +380,12 @@ class Miner(base.BaseGameEntity):
             self.changeState(self.previousState)
 
     def handleMessage(self, telegram):
-        if(self.currentState and self.currentState.onMessage(telegram)):
-            print(telegram.sender, "discharged a message for", telegram.reciever, "at time", clk.clock.timeNowFormat(), "with the message", telegram.msg, "extra info:", telegram.extraInfo)
-            self.currentState.onMessage(telegram)
-
-        #return False
+        if(self.globalState and self.globalState.onMessage(telegram, self)):
+            return True
+        elif(self.globalState is None):
+            print("globalState is no more")
+            raise TypeError("globalState is None")
+        return False
         
 
 
@@ -354,8 +402,10 @@ def main():
 
     while (True):
         clk.clock.tick()
+        print("____________________________________\n")
         clk.clock.printTime()
-        minerlist[1].moneyInTheBank = 0
+        print("\n")
+        #minerlist[1].moneyInTheBank = 0
         
         for miner in minerlist:
             if(miner.dead is True):
@@ -368,7 +418,10 @@ def main():
         for miner in minerlist:
             miner.update()
             print("\n")
+        
+        md.dispatcher.dispatchDelayedMessages()
 
+        #time advancer
         time.sleep(1)
         
 
