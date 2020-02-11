@@ -25,15 +25,45 @@ class MessageDispatcher:
             
             else:
                 telegram.dispatchTime = clk.clock.timeNow() + delay
-                print("Dispatch time:",telegram.dispatchTime)
+                print(em.entityMgr.getNameFromID(telegram.sender), "said", telegram.msg, "to",recieverEntity.name, "but we'll put it into the backburner")
                 self.msgqueue.append(telegram)
 
+    def dispatchMessageAll(self, delay, sender, msg, extrainfo = None):
+        for entID, ent in em.entityMgr.entityDict.items():
+            if(entID == sender):
+                pass
+            else:
+                recieverEntity = ent
+                
+                telegram = tele.Telegram(sender,entID,msg,0,extrainfo)
+                if(delay <= 0):
+                    self.discharge(recieverEntity, telegram)
+                else:
+                    telegram.dispatchTime = clk.clock.timeNow() + delay
+                    print(em.entityMgr.getNameFromID(telegram.sender), "said", telegram.msg, "to",recieverEntity.name, "but we'll put it into the backburner")
+                    self.msgqueue.append(telegram)
+                    
+
+
+
+
     def dispatchDelayedMessages(self):
+        lastTelegram = None
+        index = 0
         for msg in self.msgqueue:
+            print(msg.msg, " and dispatchtime", msg.dispatchTime)
+            print("looping through message number",self.msgqueue.index(msg))
+            index += 1
             if (msg.dispatchTime <= clk.clock.timeNow() and msg.dispatchTime > 0):
-                reciever = em.entityMgr.getEntityFromID(msg.reciever)
-                self.discharge(reciever, msg)
-                self.msgqueue.pop(0)
+                if(lastTelegram is not None and lastTelegram == msg):
+                    print("Duplicate telegram")
+                    self.msgqueue.pop(self.msgqueue.index(msg))
+                else:
+                    lastTelegram = msg
+                    #reciever = em.entityMgr.getEntityFromID(msg.reciever)
+                    #self.discharge(reciever, msg)
+                    self.msgqueue.pop(self.msgqueue.index(msg))
+                    print("dispatching telegram")
 
 
     def discharge(self, recieverEntity, telegram):
@@ -42,3 +72,4 @@ class MessageDispatcher:
         print(em.entityMgr.getNameFromID(telegram.sender), "said", telegram.msg, "to",recieverEntity.name, "with extra info", telegram.extraInfo)
         recieverEntity.handleMessage(telegram)
 dispatcher = MessageDispatcher()
+

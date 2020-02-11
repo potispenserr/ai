@@ -12,3 +12,13 @@ class Telegram:
         self.extraInfo = extrainfo
     def printTelegram(self):
         print("Sender:", self.sender, "Reciever", self.reciever, "Message: ", self.msg, "DispatchTime:", self.dispatchTime, "ExtraInfo: ", self.extraInfo)
+    
+    def __eq__(self,other):
+        if(self.sender == other.sender and
+        self.reciever == other.reciever and
+        self.msg == other.msg and 
+        self.dispatchTime == other.dispatchTime and
+        self.extraInfo == other.extraInfo):
+            return True
+        else:
+            return False
