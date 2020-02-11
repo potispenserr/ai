@@ -49,21 +49,25 @@ class MessageDispatcher:
 
     def dispatchDelayedMessages(self):
         lastTelegram = None
-        index = 0
-        for msg in self.msgqueue:
-            print(msg.msg, " and dispatchtime", msg.dispatchTime)
-            print("looping through message number",self.msgqueue.index(msg))
-            index += 1
-            if (msg.dispatchTime <= clk.clock.timeNow() and msg.dispatchTime > 0):
-                if(lastTelegram is not None and lastTelegram == msg):
-                    print("Duplicate telegram")
-                    self.msgqueue.pop(self.msgqueue.index(msg))
+        index = 1
+        while(len(self.msgqueue) > 0):
+            for msg in self.msgqueue:
+                print(msg.msg, " and dispatchtime", msg.dispatchTime)
+                print("looping through message number",self.msgqueue.index(msg))
+                index += 1
+                if (msg.dispatchTime <= clk.clock.timeNow() and msg.dispatchTime > 0):
+                    if(lastTelegram is not None and lastTelegram == msg):
+                        print("Duplicate telegram")
+                        self.msgqueue.pop(self.msgqueue.index(msg))
+                    else:
+                        lastTelegram = msg
+                        reciever = em.entityMgr.getEntityFromID(msg.reciever)
+                        self.discharge(reciever, msg)
+                        self.msgqueue.pop(self.msgqueue.index(msg))
+                        print("dispatching telegram")
                 else:
-                    lastTelegram = msg
-                    #reciever = em.entityMgr.getEntityFromID(msg.reciever)
-                    #self.discharge(reciever, msg)
-                    self.msgqueue.pop(self.msgqueue.index(msg))
-                    print("dispatching telegram")
+                    break
+            break
 
 
     def discharge(self, recieverEntity, telegram):

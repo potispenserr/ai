@@ -244,19 +244,42 @@ class YouDied(base.State):
         
 
     def exit(self, miner):
-        print(miner.name, ":Guess who's back, back again")
+        #print(miner.name, ":Guess who's back, back again")
+        pass
 
     def onMessage(self, telegram):
         return False
 
 class GoToTheMovies(base.State):
     def enter(self, miner):
-        print(miner.name, ":i've heard that the amazing bulk is a great movie")
+        miner.currentLocation = "Cinema"    
+
     def execute(self, miner):
-        miner.socialNeed -= 10
-        print(miner.name, "*watching a movie*")
+        miner.socialNeed -= 20
+        movieEndTime = clk.clock.timeNow() + random.randint(2,3)
+        print("MovieEndTime:", movieEndTime)
+
+        #Sends a message to all other people that are with the miner at the cinema
+        #Only if the last telegram is MeetupAck which means that this miner is the first to arrive at the cinema
+        #And only if interruptible state is True which means that this is the first time it's sending the message
+        if(miner.lastTelegram.msg == "MeetupAck" and miner.interruptableState is True):
+            movieSuggestionDict = {
+                0: "How about we watch The Amazing Bulk, i've heard that it's a great movie",
+                1: "What do you think about Varning för Jönssonligan? It's a real classic",
+                2: "Let's see the movie Cats, it seems like a awesome movie",
+                3: "Sweet they're playing The Room. That right there is a masterpiece. What do you say?"
+            }
+            randMovie = random.randint(0,len(movieSuggestionDict)-1)
+            print(miner.name, ": ",movieSuggestionDict.get(randMovie), sep="")
+            md.dispatcher.dispatchMessageAll(0,miner.entityID, "MovieSuggestion")
+        print(miner.name, "*watching the movie*")
+        miner.interruptableState = False
+        if(movieEndTime >= clk.clock.timeNow()):
+            miner.revertToPreviousState()
+
     def exit(self, miner):
         print("man that was a great movie")
+        miner.interruptableState = True
 
     def onMessage(self,telegram):
         return False
@@ -269,17 +292,34 @@ class GlobalState(base.State):
     def exit(self, miner):
         pass
     def onMessage(self, telegram, miner):
-        #telegram.printTelegram()
+        telegram.printTelegram()
+        miner.lastTelegram = telegram
         if(telegram.msg == "MeetupRequest"):
+            miner.hasPlans = True
             messageDelay = abs(clk.clock.timeNow() - int(telegram.extraInfo))
             print("MessageDelay:", messageDelay)
             print(em.entityMgr.getNameFromID(telegram.sender), ": Hey ", miner.name, " do you want to go to the movies at ", telegram.extraInfo, ":00", sep="")
             print("Message queue:",md.dispatcher.msgqueue)
             md.dispatcher.dispatchMessage(messageDelay,miner.entityID,miner.entityID,"MeetupAck")
             md.dispatcher.dispatchMessage(messageDelay,miner.entityID, telegram.sender, "MeetupAck")
+
         if(telegram.msg == "MeetupAck"):
             print(miner.name, ":Yo let's do it")
             miner.changeState(GoToTheMovies())
+
+        if(telegram.msg == "MovieSuggestion"):
+            receiverEntity = em.entityMgr.getEntityFromID(telegram.reciever)
+            if(receiverEntity.currentLocation == "Cinema"):
+                responseDict = {
+                    0: "Yeah it's a great movie, you really have a good taste in movies",
+                    1: "No it's a shite movie let's watch something else before i leave",
+                    2: "Fuck off with that bullshit! Do i really have to watch it?",
+                    3: "I've never heard of it before but sure let's watch it"
+                }
+                randResponse = random.randint(0,len(responseDict)-1)
+                print(miner.name, " : ", responseDict.get(randResponse), sep="")
+
+
 
         
             
@@ -306,10 +346,12 @@ class Miner(base.BaseGameEntity):
     currentState = ISleep()
     globalState = GlobalState()
     currentLocation = ""
-    loclist = ("Hell?", "Dallas", "Travven", "Home", "Bank", "Mine", "CallCenter", "Store")
+    loclist = ("Hell?", "Dallas", "Travven", "Home", "Bank", "Mine", "CallCenter", "Store", "Cinema")
     interruptableState = True
     dead = False
     hasPlans = False
+    hasPlansWith = []
+    lastTelegram = None
 
 
     thirst = 0
@@ -331,6 +373,8 @@ class Miner(base.BaseGameEntity):
             self.hunger += 1
             self.socialNeed += 1
             self.fatigue += 1
+
+            print("Last telegram", self.lastTelegram)
 
             #stat printers
             #print(self.name," thirst: ", self.thirst, " hunger: ", self.hunger)
@@ -354,7 +398,7 @@ class Miner(base.BaseGameEntity):
             #Social need checker
             if(self.socialNeed > 10 and self.hasPlans is False):
                 print("i'm feeling lonely, let's see if any of my friends want to meet up")
-                md.dispatcher.dispatchMessageAll(0,self.entityID,"MeetupRequest","14")
+                md.dispatcher.dispatchMessageAll(0,self.entityID,"MeetupRequest","10")
                 self.hasPlans = True
 
             
@@ -425,21 +469,27 @@ def main():
         print("____________________________________\n")
         clk.clock.printTime()
         print("\n")
-        md.dispatcher.dispatchDelayedMessages()
         
-        for miner in minerlist:
-            if(miner.dead is True):
-                minerlist.remove(miner)
+        minerindex = 0
+        
+        while(minerindex < len(minerlist)):
+            minerindex += 1
+            for miner in minerlist:
+                if(miner.dead is True):
+                    minerlist.remove(miner)
 
         if (len(minerlist) == 0):
              print("Everyone is dead :(")
              break
-        
+
         for miner in minerlist:
             miner.update()
             print("\n")
         
-        
+        index = 0
+        while(index < len(minerlist)):
+            index += 1
+            md.dispatcher.dispatchDelayedMessages()
 
         #time advancer
         time.sleep(1)
