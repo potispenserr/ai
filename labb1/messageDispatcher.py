@@ -52,8 +52,8 @@ class MessageDispatcher:
         index = 1
         while(len(self.msgqueue) > 0):
             for msg in self.msgqueue:
-                print(msg.msg, " and dispatchtime", msg.dispatchTime)
-                print("looping through message number",self.msgqueue.index(msg))
+                #print(msg.msg, " and dispatchtime", msg.dispatchTime)
+                #print("looping through message number",self.msgqueue.index(msg))
                 index += 1
                 if (msg.dispatchTime <= clk.clock.timeNow() and msg.dispatchTime > 0):
                     if(lastTelegram is not None and lastTelegram == msg):
