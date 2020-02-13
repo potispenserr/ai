@@ -13,7 +13,7 @@ class MessageDispatcher:
 
     def dispatchMessage(self, delay, sender, reciever, msg, extrainfo = None):
         recieverEntity = em.entityMgr.getEntityFromID(reciever)
-        print("dispatching message")
+        #print("dispatching message")
 
         if(recieverEntity is None):
             print("Warning! No reciever has the ID: ", reciever)
@@ -64,7 +64,7 @@ class MessageDispatcher:
                         reciever = em.entityMgr.getEntityFromID(msg.reciever)
                         self.discharge(reciever, msg)
                         self.msgqueue.pop(self.msgqueue.index(msg))
-                        print("dispatching telegram")
+                        #print("dispatching telegram")
                 else:
                     break
             break
@@ -72,7 +72,7 @@ class MessageDispatcher:
 
     def discharge(self, recieverEntity, telegram):
         #print(telegram.sender, "discharged a message for", telegram.reciever, "at time", clk.clock.timeNowFormat(), "with the message", telegram.msg, "extra info:", telegram.extraInfo)
-        print("discharging message")
+        #print("discharging message")
         print(em.entityMgr.getNameFromID(telegram.sender), "said", telegram.msg, "to",recieverEntity.name, "with extra info", telegram.extraInfo)
         recieverEntity.handleMessage(telegram)
 dispatcher = MessageDispatcher()
