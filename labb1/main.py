@@ -405,7 +405,10 @@ class GlobalState(base.State):
         elif(telegram.msg == "MeetupCancelled"):
             print(miner.name, ": That's too bad", sep="")
             miner.hasPlans = False
-        #TODO meetupdenied
+        elif(telegram.msg == "MeetupDenied"):
+            miner.hasPlans = False
+            pass
+
         return True
         
 
@@ -551,7 +554,7 @@ def main():
         em.entityMgr.registerEntity(miner)
     #minerlist[0].thirst = 1000
     #minerlist[0].hunger = 1000
-    #minerlist[0].fatigue = 1000
+    minerlist[0].fatigue = 1000
     #minerlist[0].currentState = DallasTorsdag()
     minerlist[0].hasTools = True
 
@@ -559,6 +562,7 @@ def main():
     #minerlist[1].hunger = 1000
     #minerlist[1].fatigue = 1000
     #minerlist[1].currentState = DallasTorsdag()
+    minerlist[1].socialNeed = 60
 
     while (True):
         clk.clock.tick()
