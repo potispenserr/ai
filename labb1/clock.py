@@ -1,10 +1,10 @@
 class Clock:
     def __init__(self):
-        self.currentHour = 0
+        self.currentHour = 7
         self.day = 1
         self.currentYear = 2020
 
-    currentHour = 0
+    currentHour = 8
     currentDay = 1
     currentYear = 2020
 

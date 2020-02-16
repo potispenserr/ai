@@ -38,7 +38,6 @@ death = """
 class NuggetMining(base.State):
 
     def enter(self, miner):
-        print("Fatigue: ", miner.fatigue)
         if (miner.currentLocation != "Mine"):
             print(miner.name, ": gonna get me some nuggets")
             miner.currentLocation = "Mine"
@@ -46,7 +45,7 @@ class NuggetMining(base.State):
     def execute(self, miner):
         if(miner.currentLocation == "Mine"):
             miner.moneyCarried += 2
-            miner.fatigue += 2
+            miner.fatigue += 1
             print(miner.name, ": gettin' them nuggets")
             if (miner.moneyCarried >= miner.pocketSize):
                 miner.changeState(PushForceBank())
@@ -77,11 +76,13 @@ class CallCenter(base.State):
         print(miner.name, ":Rude people on the line, why am i not surprised")
         if (miner.moneyCarried >= miner.pocketSize):
             miner.changeState(PushForceBank())
-        miner.fatigue += 3
+        miner.fatigue += 1
         #Miner gets money deposited into his bank instead of in his hand
         miner.moneyInTheBank += 1
         if (miner.moneyCarried >= miner.pocketSize):
             miner.changeState(PushForceBank())
+        if(clk.clock.timeNow() >= 18):
+            miner.revertToPreviousState()
 
     def exit(self, miner):
         print(miner.name, ":I've just about had it with rude people on the phone asking stupid shit")
@@ -107,22 +108,20 @@ class ISleep(base.State):
             miner.currentLocation = "Home"
             miner.interruptableState = False
 
-        print(miner.name, ": zzzzz")
+        print(miner.name, ": zzzzz" ,sep="")
         miner.fatigue -= 6
         if (miner.fatigue < 0):
             miner.fatigue = 0
-            if (miner.previousState):
-                miner.revertToPreviousState()
-            else:
-                miner.changeToWorkState()
+
+        if(clk.clock.timeNow() > 8):
+            miner.changeToWorkState()
 
     def exit(self, miner):
         print(miner.name, ": Alright let's get this bread")
         miner.interruptableState = True
 
     def onMessage(self, telegram):
-        minerName = em.entityMgr.getNameFromID(telegram.sender)
-        print("To ", minerName, ":" " ey b0ss rot op man", sep="")
+        return False
 
 
 """class SweetHome(base.State):
@@ -269,10 +268,10 @@ class GoToTheMovies(base.State):
     movieEndTime = 0
     minerArrivalList = []
     minerDepartureList = []
+
     def enter(self, miner):
         self.minerDepartureList.clear()
-        #self.movieEndTime = clk.clock.timeNow() + random.randint(2, 3)
-        self.movieEndTime = 25
+        self.movieEndTime = clk.clock.timeNow() + random.randint(2, 3)
         if (self.movieEndTime > 23):
             self.movieEndTime = self.movieEndTime - 23
             print("movieendtime: ", self.movieEndTime)
@@ -291,23 +290,31 @@ class GoToTheMovies(base.State):
             randMovie = random.randint(0, len(movieSuggestionDict) - 1)
             print(miner.name, ": ", movieSuggestionDict.get(randMovie), sep="")
             md.dispatcher.dispatchMessageAll(0, miner.entityID, "MovieSuggestion")
+
         miner.interruptableState = False
         self.minerArrivalList.append(miner.entityID)
 
     def execute(self, miner):
-        miner.socialNeed -= 25
-        print("MovieEndTime:", self.movieEndTime)
+        #TODO weird stuff happening here
+        if(miner.currentLocation == "Cinema" and miner.hasPlans == True):
+            miner.socialNeed -= 25
+            print("MovieEndTime:", self.movieEndTime)
 
-        # Sends a message to all other people that are with the miner at the cinema
-        # Only if the last telegram is MeetupAck which means that this miner is the first to arrive at the cinema
-        # And only if interruptible state is True which means that this is the first time it's sending the message
+            # Sends a message to all other people that are with the miner at the cinema
+            # Only if the last telegram is MeetupAck which means that this miner is the first to arrive at the cinema
+            # And only if interruptible state is True which means that this is the first time it's sending the message
 
-        #print("InterruptableStateInCinema:", miner.interruptableState)
-        print(miner.name, "*watching the movie*")
-        #print("InterruptableStateInCinema2:", miner.interruptableState)
+            print("InterruptableStateInCinema:", miner.interruptableState)
+            print(miner.name, "*watching the movie*")
+            print("InterruptableStateInCinema2:", miner.interruptableState)
+            if(miner.socialNeed <= 0):
+                miner.socialNeed = 0
 
-        if (clk.clock.timeNow() >= self.movieEndTime):
+            if (clk.clock.timeNow() >= self.movieEndTime):
+                miner.changeState(ISleep())
+        else:
             miner.revertToPreviousState()
+        
 
     def exit(self, miner):
         #print("man that was a great movie")
@@ -318,7 +325,7 @@ class GoToTheMovies(base.State):
        #    for id in self.minerDepartureList:
        #        md.dispatcher.dispatchMessage(0,miner.entityID, id, "MovieFeedback")
        #self.minerDepartureList.append(miner.entityID)
-        print(miner.name, ":Alright let's leave", sep="")
+        print(miner.name, ": Alright let's leave", sep="")
         miner.hasPlans = False
 
     def onMessage(self, telegram):
@@ -359,8 +366,8 @@ class GlobalState(base.State):
 
                 print(" let's do it some other time")
 
-                md.dispatcher.dispatchMessage(0, miner.entityID, telegram.sender, "MeetupDenied", clk.clock.timeNow())
-                md.dispatcher.dispatchMessage(0, miner.entityID, miner.entityID, "MeetupDenied", clk.clock.timeNow())
+                md.dispatcher.dispatchMessage(6, miner.entityID, telegram.sender, "MeetupDenied", clk.clock.timeNow())
+                md.dispatcher.dispatchMessage(6, miner.entityID, miner.entityID, "MeetupDenied", clk.clock.timeNow())
             else:
                 print(miner.name,": Sure sounds like a good idea", sep="") 
                 md.dispatcher.dispatchMessage(messageDelay, miner.entityID, miner.entityID, "MeetupAck")
@@ -373,7 +380,7 @@ class GlobalState(base.State):
                 md.dispatcher.dispatchMessageAll(0,miner.entityID, "MeetupCancelled")
                 md.dispatcher.dispatchMessage(0,miner.entityID, miner.entityID, "MeetupCancelled")
             elif(miner.hasPlans == False):
-                print(miner.name, ": Guess i'll do something else")
+                print(miner.name, ": Well shit")
                 miner.revertToPreviousState()
             else:
                 print(miner.name, ":Yo let's do it")
@@ -385,7 +392,7 @@ class GlobalState(base.State):
                 responseDict = {
                     0: "Yeah it's a great movie, you really have a good taste in movies",
                     1: "No it's a shit movie let's watch something else",
-                    2: "Fuck off with that bullshit! Do i really have to watch it?",
+                    2: "Hahaha very funny. Wait you're serious?",
                     3: "I've never heard of it before but sure let's watch it"
                 }
                 randResponse = random.randint(0, len(responseDict) - 1)
@@ -403,10 +410,11 @@ class GlobalState(base.State):
             randFeedback = random.randint(0, len(feedbackDict) - 1)
             print(miner.name, ": ", feedbackDict.get(randFeedback), sep="")
         elif(telegram.msg == "MeetupCancelled"):
-            print(miner.name, ": That's too bad", sep="")
+            #print(miner.name, ": That's too bad", sep="")
             miner.hasPlans = False
         elif(telegram.msg == "MeetupDenied"):
             miner.hasPlans = False
+            print("MY PLANS HAS BEEN CLEARED")
             pass
 
         return True
@@ -419,7 +427,7 @@ class Miner(base.BaseGameEntity):
         self.name = minername
         self.thirst = random.randint(0, 15)
         self.hunger = random.randint(0, 15)
-        self.fatigue = random.randint(0, 15)
+        self.fatigue = 0
         self.socialNeed = random.randint(0, 35)
 
         self.moneyCarried = 0
@@ -475,10 +483,11 @@ class Miner(base.BaseGameEntity):
                     print("i'm feeling lonely, let's see if any of my friends want to meet up")
                     md.dispatcher.dispatchMessageAll(0, self.entityID, "MeetupRequest", randomMeetUpTime)
                     self.hasPlans = True
-
+                #Miner goes to the store and buys a pickaxe if he doesn't have one
                 if (self.hasTools == False and self.moneyInTheBank >= 10):
-                    if (clk.clock.timeNow() > 8 and clk.clock.timeNow() < 19):
+                    if(clk.clock.timeNow() > 8 and clk.clock.timeNow() < 19):
                         self.changeState(Store())
+
                 # Check if Death is imminent
                 if (self.thirst >= 30):
                     self.changeState(GoToTravven())
@@ -488,18 +497,19 @@ class Miner(base.BaseGameEntity):
                     self.changeState(DallasTorsdag())
                     pass
 
-                elif (self.fatigue >= 50):
-                    self.changeState(ISleep())
+                elif (self.fatigue >= 50 or (clk.clock.timeNow() > 23 or clk.clock.timeNow() < 8)):
+                    if(self.hasPlans == True):
+                        #print("I want to go to bed but i've already made plans tonight")
+                        pass
+
+                    else:
+                        #Check if currentState is already in Sleep and if it is just carry on
+                        if(isinstance(self.currentState, ISleep)):
+                            pass
+                        else:
+                            self.changeState(ISleep())
                     pass
                 
-            
-            #Errorchecking if lastTelegram is None
-            if(self.lastTelegram):
-                #Checks if last telegram was MeetupDenied and if miner recived it 6 hours earlier
-                #So the miner doesn't constantly spam MeetupRequests
-                if(self.lastTelegram.msg == "MeetupDenied" and clk.clock.timeNow() >= self.lastTelegram.extraInfo + 6):
-                    print(self.name, "MY PLANS HAS BEEN CLEARED")
-                    self.hasPlans = False
 
             # Death states
             if (self.thirst >= 50):
@@ -509,7 +519,7 @@ class Miner(base.BaseGameEntity):
                 self.changeState(YouDied())
                 pass
             elif (self.socialNeed >= 100):
-                self.changeState(YouDied())
+                #self.changeState(YouDied())
                 pass
             # execute current state
             self.currentState.execute(self)
@@ -527,14 +537,24 @@ class Miner(base.BaseGameEntity):
         self.currentState.enter(self)
 
     def changeToWorkState(self):
-        if (self.hasTools == True):
-            self.changeState(NuggetMining())
+        if(clk.clock.timeNow() > 8 and clk.clock.timeNow() < 18):
+            if (self.hasTools == True):
+                self.changeState(NuggetMining())
+            else:
+                self.changeState(CallCenter())
         else:
-            self.changeState(CallCenter())
+            if(isinstance(self.previousState, NuggetMining) or isinstance(self.previousState, CallCenter)):
+                self.changeState(ISleep())
+            else:
+                self.revertToPreviousState()
+
 
     def revertToPreviousState(self):
         if (self.previousState):
-            self.changeState(self.previousState)
+            if(clk.clock.timeNow() > 8 and clk.clock.timeNow() < 18):
+                if(isinstance(self.previousState, NuggetMining) or isinstance(self.previousState, CallCenter):
+                    self.changeState(self.previousState)
+            
 
     def handleMessage(self, telegram):
         if (self.globalState and self.globalState.onMessage(telegram, self)):
@@ -554,15 +574,15 @@ def main():
         em.entityMgr.registerEntity(miner)
     #minerlist[0].thirst = 1000
     #minerlist[0].hunger = 1000
-    minerlist[0].fatigue = 1000
+    #minerlist[0].fatigue = 1000
     #minerlist[0].currentState = DallasTorsdag()
-    minerlist[0].hasTools = True
+    #minerlist[0].hasTools = True
 
     #minerlist[1].thirst = 1000
     #minerlist[1].hunger = 1000
     #minerlist[1].fatigue = 1000
     #minerlist[1].currentState = DallasTorsdag()
-    minerlist[1].socialNeed = 60
+    minerlist[1].socialNeed = 70
 
     while (True):
         clk.clock.tick()
