@@ -39,20 +39,20 @@ class NuggetMining(base.State):
 
     def enter(self, miner):
         if (miner.currentLocation != "Mine"):
-            print(miner.name, ": gonna get me some nuggets")
+            print(miner.name, ": gonna get me some nuggets" , sep="")
             miner.currentLocation = "Mine"
 
     def execute(self, miner):
         if(miner.currentLocation == "Mine"):
             miner.moneyCarried += 2
             miner.fatigue += 1
-            print(miner.name, ": gettin' them nuggets")
+            print(miner.name, ": gettin' them nuggets", sep="")
             if (miner.moneyCarried >= miner.pocketSize):
                 miner.changeState(PushForceBank())
             toolBreakChance = random.randint(1, 10)
             if (toolBreakChance < 2):
                 miner.hasTools = False
-                print(miner.name, ": Ah shucks my goddamned pickaxe broke")
+                print(miner.name, ": Ah shucks my goddamned pickaxe broke", sep="")
                 miner.changeToWorkState()
             if(clk.clock.timeNow() >= 19):
                 miner.changeState(SweetHome())
@@ -63,7 +63,7 @@ class NuggetMining(base.State):
         elif (miner.hasTools == False):
             print(miner.name, ": Well my pickaxe broke so i can't continue here", sep="")
         else:
-            print(miner.name, ": I'm done working, time to do something else", sep="")
+            print(miner.name, ": I'm done working for now, time to do something else", sep="")
 
     def onMessage(self, telegram):
         pass
@@ -71,11 +71,11 @@ class NuggetMining(base.State):
 
 class CallCenter(base.State):
     def enter(self, miner):
-        print(miner.name, ": Heading to the dreaded Microsoft tech-support center")
+        print(miner.name, ": Heading to the dreaded Microsoft tech-support center", sep="")
         miner.currentLocation = "CallCenter"
 
     def execute(self, miner):
-        print(miner.name, ":Rude people on the line, why am i not surprised")
+        print(miner.name, ": Rude people on the line, why am i not surprised", sep="")
         if (miner.moneyCarried >= miner.pocketSize):
             miner.changeState(PushForceBank())
         miner.fatigue += 1
@@ -97,10 +97,6 @@ class CallCenter(base.State):
 class ISleep(base.State):
 
     def enter(self, miner):
-        if(miner.hasPlans == True):
-            print("I'm tired but i still have plans i'm going to head out again")
-            miner.revertToPreviousState()
-            
         if (miner.currentLocation != "Home"):
             miner.currentLocation = "Home"
             print(miner.name, ":I'm going home to sleep")
@@ -140,7 +136,7 @@ class SweetHome(base.State):
             miner.changeState(ISleep())
 
     def exit(self, miner):
-        print(miner.name, ": Time to stop watching Netflix", sep="")
+        print(miner.name, ": Time to stop watching Netflix and do something else", sep="")
 
 # Mad Bank YO
 class PushForceBank(base.State):
@@ -151,11 +147,14 @@ class PushForceBank(base.State):
 
     def execute(self, miner):
         print(miner.name, ": Here's some of the cash", sep="")
-        miner.moneyCarried -= 3
-        miner.moneyInTheBank += 3
+        miner.moneyCarried -= 5
+        miner.moneyInTheBank += 5
         if (miner.moneyCarried <= 0):
             miner.moneyCarried = 0
-            miner.changeToWorkState()
+            if(clk.clock.timeNow() >= 19):
+                miner.changeState(SweetHome())
+            else:
+                miner.changeToWorkState()
 
     def exit(self, miner):
         print(miner.name, ": And that was that. Let's do something else", sep="")
@@ -227,12 +226,12 @@ class Store(base.State):
         print(miner.name, ": I got the pickaxe, now Im going to check it out", sep="")
         miner.hasTools = True
         miner.moneyInTheBank -= 10
-        #Edge Case: If the previous state was working at the call center then
-        #It doesn't make much sense to continue working at the call center if miner can work at the nugget mine
-        if(isinstance(miner.previousState,CallCenter)):
-            miner.changeToWorkState()
+        # if the clock is 18 miner can only work for a hour before going home which is kinda dumb
+        # so the miner goes home directly
+        if(clk.clock.timeNow() >= 18):
+            miner.changeState(SweetHome())
         else:
-            miner.revertToPreviousState()
+            miner.changeState(NuggetMining())
 
     def exit(self, miner):
         print(miner.name, ": This pickaxe cost me a pretty penny so i sure hope it was worth it", sep="")
@@ -300,7 +299,7 @@ class GoToTheMovies(base.State):
 
     def execute(self, miner):
         if(miner.currentLocation == "Cinema" and miner.hasPlans == True):
-            miner.socialNeed -= 25
+            miner.socialNeed -= 40
             print("MovieEndTime:", self.movieEndTime)
 
             # Sends a message to all other people that are with the miner at the cinema
@@ -316,7 +315,7 @@ class GoToTheMovies(base.State):
             if (clk.clock.timeNow() >= self.movieEndTime):
                 miner.changeState(SweetHome())
         else:
-            miner.revertToPreviousState()
+            miner.changeState(SweetHome())
         
 
     def exit(self, miner):
@@ -351,7 +350,6 @@ class GlobalState(base.State):
         if (telegram.msg == "MeetupRequest"):
             miner.hasPlans = True
             messageDelay = abs(clk.clock.timeNow() - int(telegram.extraInfo))
-            #print("MessageDelay:", messageDelay)
             print(em.entityMgr.getNameFromID(telegram.sender), ": Hey ", miner.name,
                   " do you want to go to the movies at ", telegram.extraInfo, ":00", sep="")
             print(miner.name,": Sure sounds like a good idea", sep="") 
@@ -367,7 +365,7 @@ class GlobalState(base.State):
             elif(miner.hasPlans == False):
                 print(miner.name, ": Well shit")
                 if(isinstance(miner.currentState, GoToTheMovies)):
-                    miner.revertToPreviousState()
+                    miner.changeState(SweetHome())
                 
             else:
                 print(miner.name, ":Yo let's do it")
@@ -447,7 +445,7 @@ class Miner(base.BaseGameEntity):
     # Where everything happens
     def update(self):
 
-        # if miner has currentState
+        # if miner has currentState aka if miner is not dead
         if (self.currentState):
             self.thirst += 2
             self.hunger += 1
@@ -465,25 +463,30 @@ class Miner(base.BaseGameEntity):
             # Eat and Drink checks
             if (self.interruptableState == True):
                 # Social need checker
-                if (self.socialNeed > 70 and self.hasPlans is False):
-                    randomMeetUpTime = random.randint(19,22)
-                    print("i'm feeling lonely, let's see if any of my friends want to meet up")
-                    md.dispatcher.dispatchMessageAll(0, self.entityID, "MeetupRequest", randomMeetUpTime)
-                    self.hasPlans = True
+                if (self.socialNeed > 50 and self.hasPlans is False):
+                    #Miner shouldn't be able to make plans while everyone is sleeping
+                    if(clk.clock.timeNow() > 23 and clk.clock.timeNow < 8):
+                        print("I want to make plans for tomorrow but i don't think anyone is awake now")
+                    #Here everyone is awake
+                    else:
+                        randomMeetUpTime = random.randint(19,22)
+                        print("i'm feeling lonely, let's see if any of my friends want to meet up later")
+                        md.dispatcher.dispatchMessageAll(0, self.entityID, "MeetupRequest", randomMeetUpTime)
+                        self.hasPlans = True
                 #Miner goes to the store and buys a pickaxe if he doesn't have one
                 if (self.hasTools == False and self.moneyInTheBank >= 10):
                     if(clk.clock.timeNow() > 8 and clk.clock.timeNow() < 19):
                         self.changeState(Store())
 
-                # Check if Death is imminent
+                # Thirst check
                 if (self.thirst >= 30):
                     self.changeState(GoToTravven())
                     pass
-
+                # Hunger check
                 elif (self.hunger >= 30):
                     self.changeState(DallasTorsdag())
                     pass
-
+                # Sleep check
                 elif (self.fatigue >= 50 or (clk.clock.timeNow() > 23 or clk.clock.timeNow() < 8)):
                     if(self.hasPlans == True):
                         print("I want to go to bed but i've already made plans tonight")
@@ -505,6 +508,7 @@ class Miner(base.BaseGameEntity):
             elif (self.socialNeed >= 100):
                 #self.changeState(YouDied())
                 pass
+
             # execute current state
             self.currentState.execute(self)
 
@@ -527,10 +531,7 @@ class Miner(base.BaseGameEntity):
             else:
                 self.changeState(CallCenter())
         else:
-            if(isinstance(self.previousState, NuggetMining) or isinstance(self.previousState, CallCenter)):
-                self.changeState(SweetHome())
-            else:
-                self.revertToPreviousState()
+            self.changeState(SweetHome())
 
 
     def revertToPreviousState(self):
@@ -544,8 +545,6 @@ class Miner(base.BaseGameEntity):
             
             elif(isinstance(self.previousState, GoToTheMovies)):
                 self.changeState(SweetHome())
-
-            
 
             elif(clk.clock.timeNow() >= 18 or clk.clock.timeNow() <= 8):
                 self.changeState(SweetHome())
@@ -589,7 +588,7 @@ def main():
 
         while (minerindex < len(minerlist)):
             minerindex += 1
-             for miner in minerlist:
+            for miner in minerlist:
                 if (miner.dead is True):
                     minerlist.remove(miner)
 
