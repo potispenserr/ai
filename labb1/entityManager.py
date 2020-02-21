@@ -26,6 +26,4 @@ class EntityManager:
             print(elem.name)
 
 entityMgr = EntityManager()
-#for entID,ent in entityMgr.entityDict.items():
- #   print("ID:",entID, " entity:",ent)
     

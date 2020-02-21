@@ -65,8 +65,6 @@ class NuggetMining(base.State):
         else:
             print(miner.name, ": I'm done working for now, time to do something else", sep="")
 
-    def onMessage(self, telegram):
-        pass
 
 
 class CallCenter(base.State):
@@ -88,9 +86,6 @@ class CallCenter(base.State):
 
     def exit(self, miner):
         print(miner.name, ":I've just about had it with rude people on the phone asking stupid shit")
-
-    def onMessage(self, telegram):
-        return False
 
 
 # Sleep
@@ -121,9 +116,6 @@ class ISleep(base.State):
     def exit(self, miner):
         print(miner.name, ": Alright let's get this bread")
         miner.interruptableState = True
-
-    def onMessage(self, telegram):
-        return False
 
 class SweetHome(base.State):
     def enter(self, miner):
@@ -159,9 +151,6 @@ class PushForceBank(base.State):
     def exit(self, miner):
         print(miner.name, ": And that was that. Let's do something else", sep="")
 
-    def onMessage(self, telegram):
-        return False
-
 
 class GoToTravven(base.State):
     def enter(self, miner):
@@ -183,9 +172,6 @@ class GoToTravven(base.State):
     def exit(self, miner):
         miner.interruptableState = True
         print(miner.name, ": God damn it, it's sista beställningen", sep="")
-
-    def onMessage(self, telegram):
-        return False
 
 
 class DallasTorsdag(base.State):
@@ -213,10 +199,6 @@ class DallasTorsdag(base.State):
         print(miner.name, ": Always nice with some Dallas but time to get back to it", sep="")
 
 
-    def onMessage(self, telegram):
-        return False
-
-
 class Store(base.State):
     def enter(self, miner):
         print(miner.name, ": Time to get a pickaxe so i can mine chicken nuggets", sep="")
@@ -235,9 +217,6 @@ class Store(base.State):
 
     def exit(self, miner):
         print(miner.name, ": This pickaxe cost me a pretty penny so i sure hope it was worth it", sep="")
-
-    def onMessage(self, telegram):
-        return False
 
 
 # Rip in kill
@@ -270,10 +249,8 @@ class YouDied(base.State):
 class GoToTheMovies(base.State):
     movieEndTime = 0
     minerArrivalList = []
-    minerDepartureList = []
 
     def enter(self, miner):
-        self.minerDepartureList.clear()
         self.movieEndTime = clk.clock.timeNow() + random.randint(2, 3)
         if (self.movieEndTime > 23):
             self.movieEndTime = self.movieEndTime - 23
@@ -319,14 +296,8 @@ class GoToTheMovies(base.State):
         
 
     def exit(self, miner):
-        #print("man that was a great movie")
         self.minerArrivalList.clear()
         miner.interruptableState = True
-       #if(len(self.minerDepartureList) == len(em.entityMgr.entityDict) - 1):
-       #    print(miner.name, ": So what do you guys think about the movie?")
-       #    for id in self.minerDepartureList:
-       #        md.dispatcher.dispatchMessage(0,miner.entityID, id, "MovieFeedback")
-       #self.minerDepartureList.append(miner.entityID)
         print(miner.name, ": Alright let's leave", sep="")
         miner.hasPlans = False
 
@@ -376,7 +347,7 @@ class GlobalState(base.State):
             if (receiverEntity.hasPlans == True):
                 responseDict = {
                     0: "Yeah it's a great movie, you really have a good taste in movies",
-                    1: "No it's a shit movie let's watch something else",
+                    1: "No it's a shit movie. Is there any thing else to watch?",
                     2: "Hahaha very funny. Wait you're serious?",
                     3: "I've never heard of it before but sure let's watch it"
                 }
@@ -460,7 +431,7 @@ class Miner(base.BaseGameEntity):
             print(self.name, " moneyCarried: ", self.moneyCarried, " Money in the Bank: ", self.moneyInTheBank)
 
             
-            # Eat and Drink checks
+            # If miner is in a state that can be interrupted
             if (self.interruptableState == True):
                 # Social need checker
                 if (self.socialNeed > 50 and self.hasPlans is False):
@@ -496,8 +467,8 @@ class Miner(base.BaseGameEntity):
                             pass
                         else:
                             self.changeState(SweetHome())
-                
-
+            
+            # This happens regardless if miner is in a interruptable state or not
             # Death states
             if (self.thirst >= 50):
                 self.changeState(YouDied())
@@ -506,7 +477,7 @@ class Miner(base.BaseGameEntity):
                 self.changeState(YouDied())
                 pass
             elif (self.socialNeed >= 100):
-                #self.changeState(YouDied())
+                self.changeState(YouDied())
                 pass
 
             # execute current state
@@ -576,7 +547,7 @@ def main():
     #minerlist[1].hunger = 1000
     #minerlist[1].fatigue = 1000
     #minerlist[1].currentState = DallasTorsdag()
-    minerlist[1].socialNeed = 70
+    #minerlist[1].socialNeed = 70
 
     while (True):
         clk.clock.tick()
@@ -611,6 +582,6 @@ def main():
         # time advancer
         time.sleep(1)
 
-
+#duttad
 if __name__ == "__main__":
     main()
