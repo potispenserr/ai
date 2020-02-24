@@ -353,25 +353,9 @@ class GlobalState(base.State):
                 }
                 randResponse = random.randint(0, len(responseDict) - 1)
                 print(miner.name, ": ", responseDict.get(randResponse), sep="")
-
-        elif (telegram.msg == "MovieFeedback"):
-            feedbackDict = {
-                0: "Yeah it was a pretty good movie",
-                1: "I have to say that it was the best movie i've ever seen",
-                2: "It was alright",
-                3: "The movie was really boring",
-                4: "It was kind of shit",
-                5: "I wonder if i can get my money back"
-            }
-            randFeedback = random.randint(0, len(feedbackDict) - 1)
-            print(miner.name, ": ", feedbackDict.get(randFeedback), sep="")
         elif(telegram.msg == "MeetupCancelled"):
             #print(miner.name, ": That's too bad", sep="")
             miner.hasPlans = False
-        elif(telegram.msg == "MeetupDenied"):
-            miner.hasPlans = False
-            print("MY PLANS HAS BEEN CLEARED")
-            pass
 
         return True
         
@@ -483,10 +467,6 @@ class Miner(base.BaseGameEntity):
             # execute current state
             self.currentState.execute(self)
 
-        # If currentState is None check if miner has previous state
-        elif (self.previousState):
-            self.revertToPreviousState()
-
     def changeState(self, newstate):
         self.currentState.exit(self)
 
@@ -503,22 +483,6 @@ class Miner(base.BaseGameEntity):
                 self.changeState(CallCenter())
         else:
             self.changeState(SweetHome())
-
-
-    def revertToPreviousState(self):
-        if (self.previousState):
-            #Check if miner can revert to work
-            if(clk.clock.timeNow() > 8 and clk.clock.timeNow() < 19):
-                if(isinstance(self.previousState, NuggetMining) or isinstance(self.previousState, CallCenter)):
-                    self.changeState(self.previousState)
-                if(isinstance(self.previousState, Store)):
-                    self.changeToWorkState()
-            
-            elif(isinstance(self.previousState, GoToTheMovies)):
-                self.changeState(SweetHome())
-
-            elif(clk.clock.timeNow() >= 18 or clk.clock.timeNow() <= 8):
-                self.changeState(SweetHome())
             
 
     def handleMessage(self, telegram):
