@@ -21,5 +21,9 @@ class EntityManager:
     def removeEntity(self, id):
         self.entityDict.pop(id)
 
+    def printEntityDict(self):
+        for elem in self.entityDict.values():
+            print(elem.name)
+
 entityMgr = EntityManager()
     

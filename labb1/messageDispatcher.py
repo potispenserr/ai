@@ -26,7 +26,7 @@ class MessageDispatcher:
             else:
                 telegram.dispatchTime = clk.clock.timeNow() + delay
                 if (telegram.dispatchTime > 23):
-                    telegram.dispatchTime = self.movieEndTime - 23
+                    telegram.dispatchTime = telegram.dispatchTime - 23
                 print(em.entityMgr.getNameFromID(telegram.sender), "said", telegram.msg, "to",recieverEntity.name, "but we'll put it into the backburner")
                 self.msgqueue.append(telegram)
 
