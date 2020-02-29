@@ -354,6 +354,9 @@ class GlobalState(base.State):
 
 class Miner(base.BaseGameEntity):
     def __init__(self, ID, minername):
+        #super(Miner, self).nextValidID += 1
+        base.BaseGameEntity.nextValidID = ID + 1
+        print(super().nextValidID)
         super().__init__(ID)
         self.name = minername
         self.thirst = random.randint(0, 15)
@@ -486,6 +489,9 @@ def main():
     minerlist = []
     minerlist.append(Miner(1, "Sven"))
     minerlist.append(Miner(2, "Steffe"))
+    minerlist.append(Miner(3, "Åke"))
+    minerlist.append(Miner(4, "Tim-Johan"))
+
     for miner in minerlist:
         em.entityMgr.registerEntity(miner)
 
