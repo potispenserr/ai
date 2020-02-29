@@ -49,11 +49,13 @@ class NuggetMining(base.State):
             print(miner.name, ": gettin' them nuggets", sep="")
             if (miner.moneyCarried >= miner.pocketSize):
                 miner.changeState(PushForceBank())
+
             toolBreakChance = random.randint(1, 10)
             if (toolBreakChance < 2):
                 miner.hasTools = False
                 print(miner.name, ": Ah shucks my goddamned pickaxe broke", sep="")
                 miner.changeToWorkState()
+
             if(clk.clock.timeNow() >= 19):
                 miner.changeState(SweetHome())
 
@@ -233,17 +235,11 @@ class YouDied(base.State):
         elif (miner.socialNeed >= 100):
             print("It's just not worth it anymore :/")
             print("Lonelyness")
-        # print("You're lying dead on the floor")
         miner.currentState = None
-        miner.previousState = None
         miner.dead = True
 
     def exit(self, miner):
-        # print(miner.name, ":Guess who's back, back again")
         pass
-
-    def onMessage(self, telegram):
-        return False
 
 
 class GoToTheMovies(base.State):
@@ -257,9 +253,8 @@ class GoToTheMovies(base.State):
             print("movieendtime: ", self.movieEndTime)
 
         miner.currentLocation = "Cinema"
-        #print(miner.name, ": at the cinema now")
         print("MinerArrivalList:", self.minerArrivalList, "entityDict:", em.entityMgr.entityDict)
-        #Checks if 
+        #Checks if this miner is the last to arrive
         if(len(self.minerArrivalList) == len(em.entityMgr.entityDict) - 1):
             movieSuggestionDict = {
                 0: "How about we watch The Amazing Bulk, i've heard that it's a great movie",
@@ -300,9 +295,6 @@ class GoToTheMovies(base.State):
         miner.interruptableState = True
         print(miner.name, ": Alright let's leave", sep="")
         miner.hasPlans = False
-
-    def onMessage(self, telegram):
-        return False
 
 
 class GlobalState(base.State):
@@ -348,13 +340,12 @@ class GlobalState(base.State):
                 responseDict = {
                     0: "Yeah it's a great movie, you really have a good taste in movies",
                     1: "No it's a shit movie. Is there any thing else to watch?",
-                    2: "Hahaha very funny. Wait you're serious?",
+                    2: "I mean i'll watch it but i've heard that it's not really a good movie",
                     3: "I've never heard of it before but sure let's watch it"
                 }
                 randResponse = random.randint(0, len(responseDict) - 1)
                 print(miner.name, ": ", responseDict.get(randResponse), sep="")
         elif(telegram.msg == "MeetupCancelled"):
-            #print(miner.name, ": That's too bad", sep="")
             miner.hasPlans = False
 
         return True
@@ -377,7 +368,6 @@ class Miner(base.BaseGameEntity):
 
     # Stats
     name = ""
-    previousState = None
     currentState = ISleep()
     globalState = GlobalState()
     currentLocation = "Home"
@@ -406,8 +396,6 @@ class Miner(base.BaseGameEntity):
             self.hunger += 1
             self.socialNeed += 1
             self.fatigue += 1
-
-            #print("Interruptable states:", self.interruptableState)
 
             # stat printers
             print(self.name, " thirst: ", self.thirst, " hunger: ", self.hunger)
@@ -470,7 +458,6 @@ class Miner(base.BaseGameEntity):
     def changeState(self, newstate):
         self.currentState.exit(self)
 
-        self.previousState = self.currentState
         self.currentState = newstate
 
         self.currentState.enter(self)
@@ -501,17 +488,6 @@ def main():
     minerlist.append(Miner(2, "Steffe"))
     for miner in minerlist:
         em.entityMgr.registerEntity(miner)
-    #minerlist[0].thirst = 1000
-    #minerlist[0].hunger = 1000
-    #minerlist[0].fatigue = 1000
-    #minerlist[0].currentState = DallasTorsdag()
-    #minerlist[0].hasTools = True
-
-    #minerlist[1].thirst = 1000
-    #minerlist[1].hunger = 1000
-    #minerlist[1].fatigue = 1000
-    #minerlist[1].currentState = DallasTorsdag()
-    #minerlist[1].socialNeed = 70
 
     while (True):
         clk.clock.tick()
