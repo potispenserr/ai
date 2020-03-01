@@ -87,7 +87,7 @@ class CallCenter(base.State):
             miner.changeState(SweetHome())
 
     def exit(self, miner):
-        print(miner.name, ":I've just about had it with rude people on the phone asking stupid shit")
+        print(miner.name, ": I've just about had it with rude people on the phone asking stupid shit", sep="")
 
 
 # Sleep
@@ -96,10 +96,10 @@ class ISleep(base.State):
     def enter(self, miner):
         if (miner.currentLocation != "Home"):
             miner.currentLocation = "Home"
-            print(miner.name, ":I'm going home to sleep")
+            print(miner.name, ": I'm going home to sleep", sep="")
 
         miner.currentLocation = "Home"
-        print(miner.name, ":I'm so tired... I'm going to rest for a bit")
+        print(miner.name, ": I'm so tired... I'm going to rest for a bit", sep="")
         miner.interruptableState = False
 
     def execute(self, miner):
@@ -116,7 +116,7 @@ class ISleep(base.State):
             miner.changeToWorkState()
 
     def exit(self, miner):
-        print(miner.name, ": Alright let's get this bread")
+        print(miner.name, ": Alright let's get this bread" , sep="")
         miner.interruptableState = True
 
 class SweetHome(base.State):
@@ -277,14 +277,11 @@ class GoToTheMovies(base.State):
             # Sends a message to all other people that are with the miner at the cinema
             # Only if the last telegram is MeetupAck which means that this miner is the first to arrive at the cinema
             # And only if interruptible state is True which means that this is the first time it's sending the message
-
-            print("InterruptableStateInCinema:", miner.interruptableState)
             print(miner.name, "*watching the movie*")
-            print("InterruptableStateInCinema2:", miner.interruptableState)
             if(miner.socialNeed <= 0):
                 miner.socialNeed = 0
-
-            if (clk.clock.timeNow() >= self.movieEndTime):
+            #TODO will be true if movie is after 00:00
+            if (self.movieEndTime == clk.clock.timeNow()):
                 miner.changeState(SweetHome())
         else:
             miner.changeState(SweetHome())
@@ -308,7 +305,6 @@ class GlobalState(base.State):
         pass
 
     def onMessage(self, telegram, miner):
-        telegram.printTelegram()
         miner.lastTelegram = telegram
         if (telegram.msg == "MeetupRequest"):
             miner.hasPlans = True
@@ -317,16 +313,19 @@ class GlobalState(base.State):
                   " do you want to go to the movies at ", telegram.extraInfo, ":00", sep="")
             print(miner.name,": Sure sounds like a good idea", sep="") 
             md.dispatcher.dispatchMessage(messageDelay, miner.entityID, miner.entityID, "MeetupAck")
-            md.dispatcher.dispatchMessage(messageDelay, miner.entityID, telegram.sender, "MeetupAck")
+            #md.dispatcher.dispatchMessage(messageDelay, miner.entityID, telegram.sender, "MeetupAck")
 
         elif (telegram.msg == "MeetupAck"):
+            if(miner.interruptableState == False and miner.hasPlans == False):
+                print(miner.name, "i'm busy as well", sep="")
+
             if(miner.interruptableState == False):
-                print(miner.name, ": I'm so sorry something came up so i won't be able to make it to the cinema")
+                print(miner.name, ": I'm so sorry something came up so i won't be able to make it to the cinema", sep="")
                 miner.hasPlans = False
                 md.dispatcher.dispatchMessageAll(0,miner.entityID, "MeetupCancelled")
                 md.dispatcher.dispatchMessage(0,miner.entityID, miner.entityID, "MeetupCancelled")
             elif(miner.hasPlans == False):
-                print(miner.name, ": Well shit")
+                print(miner.name, ": Well shit", sep="")
                 if(isinstance(miner.currentState, GoToTheMovies)):
                     miner.changeState(SweetHome())
                 
@@ -354,9 +353,7 @@ class GlobalState(base.State):
 
 class Miner(base.BaseGameEntity):
     def __init__(self, ID, minername):
-        #super(Miner, self).nextValidID += 1
         base.BaseGameEntity.nextValidID = ID + 1
-        print(super().nextValidID)
         super().__init__(ID)
         self.name = minername
         self.thirst = random.randint(0, 15)
@@ -411,13 +408,14 @@ class Miner(base.BaseGameEntity):
                 # Social need checker
                 if (self.socialNeed > 50 and self.hasPlans is False):
                     #Miner shouldn't be able to make plans while everyone is sleeping
-                    if(clk.clock.timeNow() > 23 and clk.clock.timeNow < 8):
+                    if(clk.clock.timeNow() > 22 and clk.clock.timeNow < 8):
                         print("I want to make plans for tomorrow but i don't think anyone is awake now")
                     #Here everyone is awake
                     else:
                         randomMeetUpTime = random.randint(19,22)
-                        print("i'm feeling lonely, let's see if any of my friends want to meet up later")
+                        print(self.name, "i'm feeling lonely, let's see if any of my friends want to meet up later", sep="")
                         md.dispatcher.dispatchMessageAll(0, self.entityID, "MeetupRequest", randomMeetUpTime)
+                        md.dispatcher.dispatchMessage(abs(randomMeetUpTime - clk.clock.timeNow()), self.entityID, self.entityID, "MeetupAck")
                         self.hasPlans = True
                 #Miner goes to the store and buys a pickaxe if he doesn't have one
                 if (self.hasTools == False and self.moneyInTheBank >= 10):
@@ -492,6 +490,8 @@ def main():
     minerlist.append(Miner(3, "Åke"))
     minerlist.append(Miner(4, "Tim-Johan"))
 
+    minerlist[0].socialNeed = 50
+
     for miner in minerlist:
         em.entityMgr.registerEntity(miner)
 
@@ -514,10 +514,9 @@ def main():
             break
 
         for miner in minerlist:
-            print("\n")
             miner.update()
             print("\n")
-            
+        
 
         index = 0
         while (index < len(minerlist)):

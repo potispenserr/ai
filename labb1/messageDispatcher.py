@@ -27,7 +27,7 @@ class MessageDispatcher:
                 telegram.dispatchTime = clk.clock.timeNow() + delay
                 if (telegram.dispatchTime > 23):
                     telegram.dispatchTime = telegram.dispatchTime - 23
-                print(em.entityMgr.getNameFromID(telegram.sender), "said", telegram.msg, "to",recieverEntity.name, "but we'll put it into the backburner")
+                print(em.entityMgr.getNameFromID(telegram.sender), "said", telegram.msg, "to",recieverEntity.name, "with the dispatch time", telegram.dispatchTime, "but we'll put it into the backburner")
                 self.msgqueue.append(telegram)
 
     def dispatchMessageAll(self, delay, sender, msg, extrainfo = None):
@@ -56,8 +56,6 @@ class MessageDispatcher:
         index = 1
         while(len(self.msgqueue) > 0):
             for msg in self.msgqueue:
-                #print(msg.msg, " and dispatchtime", msg.dispatchTime)
-                #print("looping through message number",self.msgqueue.index(msg))
                 index += 1
                 if (msg.dispatchTime <= clk.clock.timeNow() and msg.dispatchTime > 0):
                     if(lastTelegram is not None and lastTelegram == msg):
