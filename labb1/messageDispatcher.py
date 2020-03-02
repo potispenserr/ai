@@ -27,7 +27,7 @@ class MessageDispatcher:
                 telegram.dispatchTime = clk.clock.timeNow() + delay
                 if (telegram.dispatchTime > 23):
                     telegram.dispatchTime = telegram.dispatchTime - 23
-                print(em.entityMgr.getNameFromID(telegram.sender), "said", telegram.msg, "to",recieverEntity.name, "with the dispatch time", telegram.dispatchTime, "but we'll put it into the backburner")
+                #print(em.entityMgr.getNameFromID(telegram.sender), "said", telegram.msg, "to",recieverEntity.name, "with the dispatch time", telegram.dispatchTime, "but we'll put it into the backburner")
                 self.msgqueue.append(telegram)
 
     def dispatchMessageAll(self, delay, sender, msg, extrainfo = None):
@@ -44,7 +44,7 @@ class MessageDispatcher:
                     if (telegram.dispatchTime > 23):
                         telegram.dispatchTime = telegram.dispatchTime - 23
                     telegram.dispatchTime = clk.clock.timeNow() + delay
-                    print(em.entityMgr.getNameFromID(telegram.sender), "said", telegram.msg, "to",recieverEntity.name, "but we'll put it into the backburner")
+                    #print(em.entityMgr.getNameFromID(telegram.sender), "said", telegram.msg, "to",recieverEntity.name, "but we'll put it into the backburner")
                     self.msgqueue.append(telegram)
                     
 
@@ -75,7 +75,7 @@ class MessageDispatcher:
     def discharge(self, recieverEntity, telegram):
         #print(telegram.sender, "discharged a message for", telegram.reciever, "at time", clk.clock.timeNowFormat(), "with the message", telegram.msg, "extra info:", telegram.extraInfo)
         #print("discharging message")
-        print(em.entityMgr.getNameFromID(telegram.sender), "said", telegram.msg, "to",recieverEntity.name, "with extra info", telegram.extraInfo)
+        #print(em.entityMgr.getNameFromID(telegram.sender), "said", telegram.msg, "to",recieverEntity.name, "with extra info", telegram.extraInfo)
         recieverEntity.handleMessage(telegram)
 dispatcher = MessageDispatcher()
 

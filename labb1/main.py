@@ -87,7 +87,7 @@ class CallCenter(base.State):
             miner.changeState(SweetHome())
 
     def exit(self, miner):
-        print(miner.name, ": I've just about had it with rude people on the phone asking stupid shit", sep="")
+        print(miner.name, ": I've just about had it with rude people on the phone asking stupid things", sep="")
 
 
 # Sleep
@@ -173,14 +173,13 @@ class GoToTravven(base.State):
 
     def exit(self, miner):
         miner.interruptableState = True
-        print(miner.name, ": God damn it, it's sista beställningen", sep="")
+        print(miner.name, ": Oh no, it's sista beställningen", sep="")
 
 
 class DallasTorsdag(base.State):
     def enter(self, miner):
         miner.currentLocation = "Dallas"
         randint = random.randint(0, 2)
-        print("Hunger: ", miner.hunger)
         if (randint == 0):
             print(miner.name, ": I'll get Kebabtallrik extra allt today at Dallas", sep="")
         elif (randint == 1):
@@ -248,18 +247,17 @@ class GoToTheMovies(base.State):
 
     def enter(self, miner):
         self.movieEndTime = clk.clock.timeNow() + random.randint(2, 3)
+        print(miner.name, ": Heading to the cinema now", sep="")
         if (self.movieEndTime > 23):
             self.movieEndTime = self.movieEndTime - 23
-            print("movieendtime: ", self.movieEndTime)
 
         miner.currentLocation = "Cinema"
-        print("MinerArrivalList:", self.minerArrivalList, "entityDict:", em.entityMgr.entityDict)
         #Checks if this miner is the last to arrive
         if(len(self.minerArrivalList) == len(em.entityMgr.entityDict) - 1):
             movieSuggestionDict = {
                 0: "How about we watch The Amazing Bulk, i've heard that it's a great movie",
                 1: "What do you think about Varning för Jönssonligan? It's a real classic",
-                2: "Let's see the movie Cats, it seems like a awesome movie",
+                2: "Let's see the movie Blade Runner, it seems like a awesome movie",
                 3: "Sweet they're playing The Room. That right there is a masterpiece. What do you say?"
             }
             randMovie = random.randint(0, len(movieSuggestionDict) - 1)
@@ -280,7 +278,7 @@ class GoToTheMovies(base.State):
             print(miner.name, "*watching the movie*")
             if(miner.socialNeed <= 0):
                 miner.socialNeed = 0
-            #TODO will be true if movie is after 00:00
+
             if (self.movieEndTime == clk.clock.timeNow()):
                 miner.changeState(SweetHome())
         else:
@@ -311,13 +309,14 @@ class GlobalState(base.State):
             messageDelay = abs(clk.clock.timeNow() - int(telegram.extraInfo))
             print(em.entityMgr.getNameFromID(telegram.sender), ": Hey ", miner.name,
                   " do you want to go to the movies at ", telegram.extraInfo, ":00", sep="")
-            print(miner.name,": Sure sounds like a good idea", sep="") 
+            print(miner.name,": Sure, sounds like a good idea", sep="") 
             md.dispatcher.dispatchMessage(messageDelay, miner.entityID, miner.entityID, "MeetupAck")
             #md.dispatcher.dispatchMessage(messageDelay, miner.entityID, telegram.sender, "MeetupAck")
 
         elif (telegram.msg == "MeetupAck"):
             if(miner.interruptableState == False and miner.hasPlans == False):
-                print(miner.name, "i'm busy as well", sep="")
+                print(miner.name, ": i'm busy as well", sep="")
+                return True
 
             if(miner.interruptableState == False):
                 print(miner.name, ": I'm so sorry something came up so i won't be able to make it to the cinema", sep="")
@@ -325,12 +324,12 @@ class GlobalState(base.State):
                 md.dispatcher.dispatchMessageAll(0,miner.entityID, "MeetupCancelled")
                 md.dispatcher.dispatchMessage(0,miner.entityID, miner.entityID, "MeetupCancelled")
             elif(miner.hasPlans == False):
-                print(miner.name, ": Well shit", sep="")
+                print(miner.name, ": Well guess i'll go home then", sep="")
                 if(isinstance(miner.currentState, GoToTheMovies)):
                     miner.changeState(SweetHome())
                 
             else:
-                print(miner.name, ":Yo let's do it")
+                #print(miner.name, ": Yo let's do it")
                 miner.changeState(GoToTheMovies())
 
         elif (telegram.msg == "MovieSuggestion"):
@@ -338,7 +337,7 @@ class GlobalState(base.State):
             if (receiverEntity.hasPlans == True):
                 responseDict = {
                     0: "Yeah it's a great movie, you really have a good taste in movies",
-                    1: "No it's a shit movie. Is there any thing else to watch?",
+                    1: "I guess?",
                     2: "I mean i'll watch it but i've heard that it's not really a good movie",
                     3: "I've never heard of it before but sure let's watch it"
                 }
@@ -401,6 +400,7 @@ class Miner(base.BaseGameEntity):
             print(self.name, " thirst: ", self.thirst, " hunger: ", self.hunger)
             print(self.name, " fatigue: ", self.fatigue, " social need: ", self.socialNeed)
             print(self.name, " moneyCarried: ", self.moneyCarried, " Money in the Bank: ", self.moneyInTheBank)
+            print("\n")
 
             
             # If miner is in a state that can be interrupted
@@ -408,12 +408,12 @@ class Miner(base.BaseGameEntity):
                 # Social need checker
                 if (self.socialNeed > 50 and self.hasPlans is False):
                     #Miner shouldn't be able to make plans while everyone is sleeping
-                    if(clk.clock.timeNow() > 22 and clk.clock.timeNow < 8):
-                        print("I want to make plans for tomorrow but i don't think anyone is awake now")
+                    if(clk.clock.timeNow() >= 22 and clk.clock.timeNow() < 8):
+                        print(self.name, ": I want to make plans for tomorrow but i don't think anyone is awake now", sep="")
                     #Here everyone is awake
                     else:
                         randomMeetUpTime = random.randint(19,22)
-                        print(self.name, "i'm feeling lonely, let's see if any of my friends want to meet up later", sep="")
+                        print(self.name, ": i'm feeling lonely, let's see if any of my friends want to meet up later", sep="")
                         md.dispatcher.dispatchMessageAll(0, self.entityID, "MeetupRequest", randomMeetUpTime)
                         md.dispatcher.dispatchMessage(abs(randomMeetUpTime - clk.clock.timeNow()), self.entityID, self.entityID, "MeetupAck")
                         self.hasPlans = True
@@ -433,7 +433,7 @@ class Miner(base.BaseGameEntity):
                 # Sleep check
                 elif (self.fatigue >= 50 or (clk.clock.timeNow() > 23 or clk.clock.timeNow() < 8)):
                     if(self.hasPlans == True):
-                        print("I want to go to bed but i've already made plans tonight")
+                        print(": I want to go to bed but i've already made plans tonight", sep="")
                     else:
                         #Check if currentState is already in Sleep and if it is just carry on
                         if(isinstance(self.currentState, ISleep) or isinstance(self.currentState, SweetHome)):
