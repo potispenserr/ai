@@ -7,34 +7,14 @@ import messageDispatcher as md
 import telegram as tele
 
 death = """
-                                          ,,,xxxx
- ``''==xx#################xxxxx===---xxx##########
-                `''################################
-                   ####           ####P'
---                ####            ####
-                ####              ####
-              ####`'=..           ####      ,#####
-          ,####      ###,,        ####,,==#####""'
-       ,###`'==        '####\     ####
-    ,,##`     ""###      ####     ####
-                 ####   ####      ####
-                   #######        ####
-                    ####          ####
-                  ####            ####
-                ####              ####            #
-            ,####'                ####           ##
-        ,####'                    #################
-    ,x##                            ##############
-    
-            ______ _____  ___ _____ _   _ 
-            |  _  \  ___|/ _ \_   _| | | |
-            | | | | |__ / /_\ \| | | |_| |
-            | | | |  __||  _  || | |  _  |
-            | |/ /| |___| | | || | | | | |
-            |___/ \____/\_| |_/\_/ \_| |_/"""
+______ _____  ___ _____ _   _ 
+|  _  \  ___|/ _ \_   _| | | |
+| | | | |__ / /_\ \| | | |_| |
+| | | |  __||  _  || | |  _  |
+| |/ /| |___| | | || | | | | |
+|___/ \____/\_| |_/\_/ \_| |_/"""
 
 
-# Work mining
 class NuggetMining(base.State):
 
     def enter(self, miner):
@@ -90,7 +70,6 @@ class CallCenter(base.State):
         print(miner.name, ": I've just about had it with rude people on the phone asking stupid things", sep="")
 
 
-# Sleep
 class ISleep(base.State):
 
     def enter(self, miner):
@@ -132,7 +111,6 @@ class SweetHome(base.State):
     def exit(self, miner):
         print(miner.name, ": Time to stop watching Netflix and do something else", sep="")
 
-# Mad Bank YO
 class PushForceBank(base.State):
 
     def enter(self, miner):
@@ -220,7 +198,7 @@ class Store(base.State):
         print(miner.name, ": This pickaxe cost me a pretty penny so i sure hope it was worth it", sep="")
 
 
-# Rip in kill
+# Rip
 class YouDied(base.State):
     def enter(self, miner):
         miner.currentLocation = "Hell?"
@@ -252,7 +230,7 @@ class GoToTheMovies(base.State):
             self.movieEndTime = self.movieEndTime - 23
 
         miner.currentLocation = "Cinema"
-        #Checks if this miner is the last to arrive
+        #Checks if this miner is the last to arrive and if it is then it'll ask which movie they should watch
         if(len(self.minerArrivalList) == len(em.entityMgr.entityDict) - 1):
             movieSuggestionDict = {
                 0: "How about we watch The Amazing Bulk, i've heard that it's a great movie",
@@ -271,10 +249,6 @@ class GoToTheMovies(base.State):
         if(miner.currentLocation == "Cinema" and miner.hasPlans == True):
             miner.socialNeed -= 40
             print("MovieEndTime:", self.movieEndTime)
-
-            # Sends a message to all other people that are with the miner at the cinema
-            # Only if the last telegram is MeetupAck which means that this miner is the first to arrive at the cinema
-            # And only if interruptible state is True which means that this is the first time it's sending the message
             print(miner.name, "*watching the movie*")
             if(miner.socialNeed <= 0):
                 miner.socialNeed = 0
@@ -311,7 +285,6 @@ class GlobalState(base.State):
                   " do you want to go to the movies at ", telegram.extraInfo, ":00", sep="")
             print(miner.name,": Sure, sounds like a good idea", sep="") 
             md.dispatcher.dispatchMessage(messageDelay, miner.entityID, miner.entityID, "MeetupAck")
-            #md.dispatcher.dispatchMessage(messageDelay, miner.entityID, telegram.sender, "MeetupAck")
 
         elif (telegram.msg == "MeetupAck"):
             if(miner.interruptableState == False and miner.hasPlans == False):
@@ -329,7 +302,6 @@ class GlobalState(base.State):
                     miner.changeState(SweetHome())
                 
             else:
-                #print(miner.name, ": Yo let's do it")
                 miner.changeState(GoToTheMovies())
 
         elif (telegram.msg == "MovieSuggestion"):
@@ -370,7 +342,6 @@ class Miner(base.BaseGameEntity):
     currentState = ISleep()
     globalState = GlobalState()
     currentLocation = "Home"
-    loclist = ("Hell?", "Dallas", "Travven", "Home", "Bank", "Mine", "CallCenter", "Store", "Cinema")
     interruptableState = False
     dead = False
     hasPlans = False
@@ -490,8 +461,6 @@ def main():
     minerlist.append(Miner(3, "Åke"))
     minerlist.append(Miner(4, "Tim-Johan"))
 
-    minerlist[0].socialNeed = 50
-
     for miner in minerlist:
         em.entityMgr.registerEntity(miner)
 
@@ -501,13 +470,9 @@ def main():
         clk.clock.printTime()
         print("\n")
 
-        minerindex = 0
-
-        while (minerindex < len(minerlist)):
-            minerindex += 1
-            for miner in minerlist:
-                if (miner.dead is True):
-                    minerlist.remove(miner)
+        for miner in minerlist:
+            if (miner.dead is True):
+                minerlist.remove(miner)
 
         if (len(minerlist) == 0):
             print("Everyone is dead :(")
