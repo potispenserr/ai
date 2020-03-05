@@ -7,8 +7,8 @@ def main():
     
     # load and set the logo
     pygame.display.set_caption("first blit")
-    screenWidth = 240
-    screenHeight = 180
+    screenWidth = 520
+    screenHeight = 460
 
     # create a surface on screen that has the size of 240 x 180
     screen = pygame.display.set_mode((screenWidth,screenHeight))
@@ -27,8 +27,56 @@ def main():
 
     # blit image to screen
     #screen.blit((image), (xpos,ypos))
+    f = open("Map1.txt", "r")
+    linelength = 0
+    startX = 50
+    startY = 100
 
-    screen.set_at((0, 0), (255, 0, 0, 0))
+    currentX = 50
+    currentY = 100
+
+    squaresY = len(f.readlines())
+    f.close()
+
+    f = open("Map1.txt", "r")
+    for line in f:
+        print(line)
+        linelength = len(line.rstrip())
+        squaresX = int((screenWidth - startX * 2) / linelength)
+        squareSize = 26
+        for char in line:
+            print(char,"#")
+            if(char == "X"):
+                for y in range(squareSize):
+                    for x in range(squareSize):
+                        screen.set_at((currentX, currentY), (255, 0, 0, 0))
+                        print("drawing", char, "at", startX, startY)
+                        currentX += 1
+                        currentY += 1
+            if(char == "S"):
+                for x in range(squareSize):
+                    screen.set_at((startX, startY), (0, 0, 255, 0))
+                    startX += 1
+            if(char == "O"):
+                for x in range(squareSize):
+                    screen.set_at((startX, startY), (255, 255, 255, 0))
+                    startX += 1
+            if(char == "G"):
+                for x in range(squareSize):
+                    screen.set_at((startX, startY), (0, 255, 0, 0))
+                    startX += 1
+            currentY = startY
+        
+        print("changing line")
+        startX = 50
+        startY += 10
+
+    
+    f.close()
+
+    #for x in range(50):
+    #    screen.set_at((startX, startY), (255, 0, 0, 0))
+    #    startX += 1
 
     # update the screen to make the changes visible (fullscreen update)
     pygame.display.flip()
@@ -38,7 +86,7 @@ def main():
     
     # main loop
     while running:
-        if(xpos > screenWidth - 64 or xpos <= 0):
+        """ if(xpos > screenWidth - 64 or xpos <= 0):
             stepX = -stepX
         
         if(ypos > screenHeight - 64 or ypos <= 0):
@@ -58,15 +106,15 @@ def main():
             index += 1
             for y in range(rangeY):
                 for x in range(rangeX):
-                    if (x < 20 and y < 20):
+                    if (x < 20 or y < 20):
                         screen.set_at((x, y), (255, 0, 0, 0))
                     else:
                         screen.set_at((x, y), (255, 255, 0, 0))
 
-            rangeX += 1
-            rangeY += 1
+            rangeX += 20
+            rangeY += 20
 
-        pygame.display.flip()
+        pygame.display.flip() """
 
 
         # event handling, gets all event from the eventqueue
