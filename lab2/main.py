@@ -6,7 +6,7 @@ class Level:
     # starting positions
     # startX is constant
     startX = 50
-    # startY will increment by squareSize for each line
+    # startY will increment by self.squareSize for each line
     startY = 100
 
     currentX = 50
@@ -14,10 +14,12 @@ class Level:
 
     lineX = 50
 
+    # how many pixels a square has
+    squareSize = 10
+
     def render(self):
         f = open("Map1.txt", "r")
         
-
         squaresY = len(f.readlines())
         f.close()
 
@@ -25,67 +27,69 @@ class Level:
 
         f = open("Map1.txt", "r")
         for line in f:
-            # how many pixels a square has
-            squareSize = 10
-
+            
             self.lineX = self.startX
             self.currentX = self.lineX
             self.currentY = self.startY
             for char in line:
                 if(char == "X"):
-                    for y in range(squareSize):
-                        for x in range(squareSize):
-                            self.background.set_at((self.currentX, self.currentY), (255, 0, 0, 0))
-                            self.currentX += 1
-                        self.currentX = self.lineX
-                        self.currentY += 1
-                        print("")
+                    self.drawSquare("Wall")
+
                 if(char == "S"):
-                    for y in range(squareSize):
-                        for x in range(squareSize):
-                            self.background.set_at((self.currentX, self.currentY), (0, 0, 255, 0))
-                            self.currentX += 1
-                        self.currentX = self.lineX
-                        self.currentY += 1
-                        print("")
+                    self.drawSquare("Start")
+
                 if(char == "O"):
-                    for y in range(squareSize):
-                        for x in range(squareSize):
-                            self.background.set_at((self.currentX, self.currentY), (255, 255, 255, 0))
-                            self.currentX += 1
-                        self.currentX = self.lineX
-                        self.currentY += 1
-                        print("")
+                    self.drawSquare("Walkable")
+
                 if(char == "G"):
-                    for y in range(squareSize):
-                        for x in range(squareSize):
-                            self.background.set_at((self.currentX, self.currentY), (0, 255, 0, 0))
-                            self.currentX += 1
-                        self.currentX = self.lineX
-                        self.currentY += 1
-                        print("")
+                    self.drawSquare("Goal")
 
                 self.currentY = self.startY
-                self.lineX += squareSize
+                self.lineX += self.squareSize
                 self.currentX = self.lineX
                 print("\n")
                 #for char ends
             
             self.startX = 50
-            self.startY += squareSize
+            self.startY += self.squareSize
         f.close()
     
     def drawSquare(self, obj):
-        if(obj == "wall"):
-            for y in range(squareSize):
-                for x in range(squareSize):
+        if(obj == "Wall"):
+            for y in range(self.squareSize):
+                for x in range(self.squareSize):
                     self.background.set_at((self.currentX, self.currentY), (255, 0, 0, 0))
                     self.currentX += 1
                 self.currentX = self.lineX
                 self.currentY += 1
                 print("")
+
         elif(obj == "Goal"):
-            pass
+            for y in range(self.squareSize):
+                for x in range(self.squareSize):
+                    self.background.set_at((self.currentX, self.currentY), (0, 255, 0, 0))
+                    self.currentX += 1
+                self.currentX = self.lineX
+                self.currentY += 1
+                print("")
+
+        elif(obj == "Start"):
+            for y in range(self.squareSize):
+                for x in range(self.squareSize):
+                    self.background.set_at((self.currentX, self.currentY), (0, 0, 255, 0))
+                    self.currentX += 1
+                self.currentX = self.lineX
+                self.currentY += 1
+                print("")
+
+        elif(obj == "Walkable"):
+            for y in range(self.squareSize):
+                for x in range(self.squareSize):
+                    self.background.set_at((self.currentX, self.currentY), (255, 255, 255, 0))
+                    self.currentX += 1
+                self.currentX = self.lineX
+                self.currentY += 1
+                print("")
 
     def test(self):
         image = pygame.image.load("1_img.png")
