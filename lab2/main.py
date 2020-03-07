@@ -14,8 +14,10 @@ class Level:
 
     lineX = 50
 
-    # how many pixels a square has
-    squareSize = 10
+    # how many pixels each side a square has
+    squareSize = 12
+
+    nodeDict = {}
 
     def render(self):
         f = open("Map1.txt", "r")
@@ -38,7 +40,7 @@ class Level:
                 if(char == "S"):
                     self.drawSquare("Start")
 
-                if(char == "O"):
+                if(char == "0"):
                     self.drawSquare("Walkable")
 
                 if(char == "G"):
@@ -52,9 +54,11 @@ class Level:
             
             self.startX = 50
             self.startY += self.squareSize
+
         f.close()
-    
+
     def drawSquare(self, obj):
+        self.nodeDict[(self.currentX, self.currentY)] = obj
         if(obj == "Wall"):
             for y in range(self.squareSize):
                 for x in range(self.squareSize):
@@ -65,6 +69,7 @@ class Level:
                 print("")
 
         elif(obj == "Goal"):
+            self.nodeDict[obj] = (self.currentX, self.currentY)
             for y in range(self.squareSize):
                 for x in range(self.squareSize):
                     self.background.set_at((self.currentX, self.currentY), (0, 255, 0, 0))
@@ -74,8 +79,10 @@ class Level:
                 print("")
 
         elif(obj == "Start"):
+            self.nodeDict[obj] = (self.currentX, self.currentY)
             for y in range(self.squareSize):
                 for x in range(self.squareSize):
+
                     self.background.set_at((self.currentX, self.currentY), (0, 0, 255, 0))
                     self.currentX += 1
                 self.currentX = self.lineX
@@ -83,19 +90,29 @@ class Level:
                 print("")
 
         elif(obj == "Walkable"):
+            self.nodeDict[(self.currentX, self.currentY)] = obj
             for y in range(self.squareSize):
                 for x in range(self.squareSize):
-                    self.background.set_at((self.currentX, self.currentY), (255, 255, 255, 0))
+
+                    self.background.set_at((self.currentX, self.currentY), (200, 200, 200, 0))
                     self.currentX += 1
                 self.currentX = self.lineX
                 self.currentY += 1
                 print("")
 
     def test(self):
-        image = pygame.image.load("1_img.png")
-        self.background.fill((255,255,255))
-        self.background.blit(image, (50,50))
+        image = pygame.image.load("player.png")
+        self.background.blit(image, self.nodeDict["Start"])
         print(self.background.get_at((50,50)))
+
+class Player:
+    def __init__(self, startpos, sprite):
+        self.xpos = startpos[0]
+        self.ypos = startpos[1]
+
+    xpos = 0
+    ypos = 0
+    sprite = None
 
 def main():
     # initialize the pygame module
@@ -113,16 +130,21 @@ def main():
     #image = pygame.image.load("01_image.png")
     #image.set_colorkey((255,0,255))
 
-    xpos = 50
-    ypos = 50
-    stepX = 10
-    stepY = 10
-
     screen.fill((255,255,255))
 
     level = Level()
     level.render()
     screen.blit(level.background, (0, 0))
+
+    image = pygame.image.load("player.png")
+    screen.blit(image, level.nodeDict["Start"])
+
+    player = Player(level.nodeDict["Start"], image)
+    
+
+    stepX = level.squareSize
+    stepY = level.squareSize
+
 
 
     # update the screen to make the changes visible (fullscreen update)
@@ -133,35 +155,17 @@ def main():
 
     # main loop
     while running:
-        """ if(xpos > screenWidth - 64 or xpos <= 0):
+        if(level.nodeDict[(player.xpos + stepX, player.ypos + stepY)] == "Wall"):
             stepX = -stepX
-        
-        if(ypos > screenHeight - 64 or ypos <= 0):
-            stepY = -stepY
 
-        xpos += stepX
-        ypos += stepY
+        player.xpos += stepX
+        player.ypos += stepY
 
-        screen.fill((255,255,255))
-        
+        screen.blit(level.background, (0,0))
 
-        #screen.blit(image, (xpos, ypos))
-        index = 0
-        rangeX = 0
-        rangeY = 0
-        while(index < 16):
-            index += 1
-            for y in range(rangeY):
-                for x in range(rangeX):
-                    if (x < 20 or y < 20):
-                        screen.set_at((x, y), (255, 0, 0, 0))
-                    else:
-                        screen.set_at((x, y), (255, 255, 0, 0))
+        screen.blit(image, (player.xpos, player.ypos))
 
-            rangeX += 20
-            rangeY += 20
-
-        pygame.display.flip() """
+        pygame.display.flip()
 
 
         # event handling, gets all event from the eventqueue
