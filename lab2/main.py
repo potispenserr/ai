@@ -119,7 +119,7 @@ def main():
     pygame.init()
 
     # load and set the logo
-    pygame.display.set_caption("first blit")
+    pygame.display.set_caption("drunk ai stumbles around")
     screenWidth = 520
     screenHeight = 460
 
@@ -157,6 +157,7 @@ def main():
     while running:
         if(level.nodeDict[(player.xpos + stepX, player.ypos + stepY)] == "Wall"):
             stepX = -stepX
+
 
         player.xpos += stepX
         player.ypos += stepY
