@@ -151,7 +151,39 @@ def astar(draw, grid, start, end):
 	return False
 
 def bfs(draw, grid, start, end):
-	pass
+	count = 0
+	open_queue = queue.Queue()
+	open_queue.put(start)
+	previous_spots = {start}
+	came_from = {}
+	while not open_queue.empty():
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				pygame.quit()
+
+		current = open_queue.get()
+
+		if current == end:
+			reconstruct_path(came_from, end, draw)
+			end.make_end()
+			return True
+		
+		for neighbor in current.neighbors:
+			if neighbor not in previous_spots:
+				count += 1
+				open_queue.put(neighbor)
+				came_from[neighbor] = current
+				neighbor.make_open()
+				previous_spots.add(neighbor)
+		
+		draw()
+
+		if current != start:
+			current.make_closed()
+
+
+
+
 
 def dfs(draw, grid, start, end):
 	pass
@@ -197,8 +229,13 @@ def get_clicked_pos(pos, rows, width):
 
 	return row, col
 
-def load_map(grid):
-	f = open("lab2/Map1.txt", "r")
+def load_map(grid, mapnum):
+	if mapnum is 1:
+		f = open("Map1.txt", "r")
+	elif mapnum is 2:
+		f = open("Map2.txt", "r")
+	elif mapnum is 3:
+		f = open("Map3.txt", "r")
 
 	spot = grid[7][7]
 	
@@ -232,11 +269,11 @@ def load_map(grid):
 
 
 def main(win, width):
-	ROWS = 30
+	ROWS = 40
 	grid = make_grid(ROWS, width)
 	start = None
 	end = None
-	start, end = load_map(grid)
+	start, end = load_map(grid, 1)
 
 
 
@@ -273,36 +310,44 @@ def main(win, width):
 				elif spot == end:
 					end = None
 
-			if event.type == pygame.KEYDOWN: # A*
-				if event.key == pygame.K_SPACE and start and end:
+			if event.type == pygame.KEYDOWN: 
+				if event.key == pygame.K_1:
+					start, end = load_map(grid, 1)
+				
+				if event.key == pygame.K_2:
+					start, end = load_map(grid, 2)
+				
+				if event.key == pygame.K_3:
+					start, end = load_map(grid, 3)
+
+				if event.key == pygame.K_SPACE and start and end: # A*
 					for row in grid:
 						for spot in row:
 							spot.update_neighbors(grid)
 
 					astar(lambda: draw(win, grid, ROWS, width), grid, start, end)
 
-			if event.type == pygame.KEYDOWN: # Breadth first
-				if event.key == pygame.K_b and start and end:
+				elif event.key == pygame.K_b and start and end: # Breadth first
 					for row in grid:
 						for spot in row:
 							spot.update_neighbors(grid)
 
 					bfs(lambda: draw(win, grid, ROWS, width), grid, start, end)
 
-			if event.type == pygame.KEYDOWN: # Breadth first
-				if event.key == pygame.K_b and start and end:
+				elif event.key == pygame.K_d and start and end: # Depth first
 					for row in grid:
 						for spot in row:
 							spot.update_neighbors(grid)
 
 					dfs(lambda: draw(win, grid, ROWS, width), grid, start, end)
 
-			if event.type == pygame.KEYDOWN: # clear
-				if event.key == pygame.K_c:
+				elif event.key == pygame.K_c: # clear
 					start = None
 					end = None
 					grid = make_grid(ROWS, width)
 
 	pygame.quit()
 
-main(WIN, WIDTH)
+if __name__ == "__main__":
+	main(WIN, WIDTH)
+
