@@ -2,6 +2,7 @@ import pygame
 import math
 import os
 import queue
+import time
 
 WIDTH = 500
 WIN = pygame.display.set_mode((WIDTH, WIDTH))
@@ -99,7 +100,6 @@ def reconstruct_path(came_from, current, draw):
 	while current in came_from:
 		current = came_from[current]
 		if current.color == ORANGE:
-			print("nooo don't draw over start")
 			continue
 		current.make_path()
 		draw()
@@ -186,7 +186,35 @@ def bfs(draw, grid, start, end):
 
 
 def dfs(draw, grid, start, end):
-	pass
+	count = 0
+	open_queue = queue.LifoQueue()
+	open_queue.put(start)
+	previous_spots = {start}
+	came_from = {}
+	while not open_queue.empty():
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				pygame.quit()
+
+		current = open_queue.get()
+
+		if current == end:
+			reconstruct_path(came_from, end, draw)
+			end.make_end()
+			return True
+		
+		for neighbor in current.neighbors:
+			if neighbor not in previous_spots:
+				count += 1
+				open_queue.put(neighbor)
+				came_from[neighbor] = current
+				neighbor.make_open()
+				previous_spots.add(neighbor)
+		
+		draw()
+
+		if current != start:
+			current.make_closed()
 
 
 def make_grid(rows, width):
@@ -218,6 +246,7 @@ def draw(win, grid, rows, width):
 
 	draw_grid(win, rows, width)
 	pygame.display.update()
+	#time.sleep(0.05)
 
 
 def get_clicked_pos(pos, rows, width):
@@ -248,15 +277,15 @@ def load_map(grid, mapnum):
 	for line in f:
 		for char in line:
 			if char == "X":
-				grid[startX][startY].make_barrier()
+				grid[startY][startX].make_barrier()
 
 			if char == "S":
-				grid[startX][startY].make_start()
-				start = grid[startX][startY]
+				grid[startY][startX].make_start()
+				start = grid[startY][startX]
 
 			if char == "G":
-				grid[startX][startY].make_end()
-				end = grid[startX][startY]
+				grid[startY][startX].make_end()
+				end = grid[startY][startX]
 			
 			startY += 1
 		startY = 7
@@ -269,7 +298,7 @@ def load_map(grid, mapnum):
 
 
 def main(win, width):
-	ROWS = 40
+	ROWS = 150
 	grid = make_grid(ROWS, width)
 	start = None
 	end = None
@@ -285,30 +314,7 @@ def main(win, width):
 			if event.type == pygame.QUIT:
 				run = False
 
-			if pygame.mouse.get_pressed()[0]: # LEFT
-				pos = pygame.mouse.get_pos()
-				row, col = get_clicked_pos(pos, ROWS, width)
-				spot = grid[row][col]
-				if not start and spot != end:
-					start = spot
-					start.make_start()
 
-				elif not end and spot != start:
-					end = spot
-					end.make_end()
-
-				elif spot != end and spot != start:
-					spot.make_barrier()
-
-			elif pygame.mouse.get_pressed()[2]: # RIGHT
-				pos = pygame.mouse.get_pos()
-				row, col = get_clicked_pos(pos, ROWS, width)
-				spot = grid[row][col]
-				spot.reset()
-				if spot == start:
-					start = None
-				elif spot == end:
-					end = None
 
 			if event.type == pygame.KEYDOWN: 
 				if event.key == pygame.K_1:
@@ -325,21 +331,30 @@ def main(win, width):
 						for spot in row:
 							spot.update_neighbors(grid)
 
+					startTime = time.perf_counter()
 					astar(lambda: draw(win, grid, ROWS, width), grid, start, end)
+					endTime = time.perf_counter()
+					print("Elapsed A* time:", (endTime-startTime))
 
 				elif event.key == pygame.K_b and start and end: # Breadth first
 					for row in grid:
 						for spot in row:
 							spot.update_neighbors(grid)
 
+					startTime = time.perf_counter()
 					bfs(lambda: draw(win, grid, ROWS, width), grid, start, end)
+					endTime = time.perf_counter()
+					print("Elapsed BFS time:", (endTime-startTime))
 
 				elif event.key == pygame.K_d and start and end: # Depth first
 					for row in grid:
 						for spot in row:
 							spot.update_neighbors(grid)
 
+					startTime = time.perf_counter()
 					dfs(lambda: draw(win, grid, ROWS, width), grid, start, end)
+					endTime = time.perf_counter()
+					print("Elapsed DFS time:", (endTime-startTime))
 
 				elif event.key == pygame.K_c: # clear
 					start = None
