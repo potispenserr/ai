@@ -4,7 +4,7 @@ import os
 import queue
 import time
 
-WIDTH = 500
+WIDTH = 800
 WIN = pygame.display.set_mode((WIDTH, WIDTH))
 pygame.display.set_caption("Drunk AI tries to find the right way")
 
@@ -298,7 +298,7 @@ def load_map(grid, mapnum):
 
 
 def main(win, width):
-	ROWS = 150
+	ROWS = 40
 	grid = make_grid(ROWS, width)
 	start = None
 	end = None
