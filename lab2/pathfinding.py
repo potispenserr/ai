@@ -7,7 +7,7 @@ import time
 
 WIDTH = 600
 WIN = pygame.display.set_mode((WIDTH, WIDTH))
-pygame.display.set_caption("Drunk AI tries to find the right way")
+pygame.display.set_caption("Dumb AI tries to find the right way")
 
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
@@ -75,17 +75,47 @@ class Spot:
 
 	def update_neighbors(self, grid):
 		self.neighbors = []
-		if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col].is_barrier(): # down
+
+		if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col].is_barrier(): # right
 			self.neighbors.append(grid[self.row + 1][self.col])
 
-		if self.row > 0 and not grid[self.row - 1][self.col].is_barrier(): # up
+
+		if self.row > 0 and not grid[self.row - 1][self.col].is_barrier(): # left
 			self.neighbors.append(grid[self.row - 1][self.col])
 
-		if self.col < self.total_rows - 1 and not grid[self.row][self.col + 1].is_barrier(): # right
+
+	
+		if self.col < self.total_rows - 1 and not grid[self.row][self.col + 1].is_barrier(): # down
 			self.neighbors.append(grid[self.row][self.col + 1])
 
-		if self.col > 0 and not grid[self.row][self.col - 1].is_barrier(): # left
+			if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col + 1].is_barrier() and not grid[self.row + 1][self.col].is_barrier(): # down right
+				self.neighbors.append(grid[self.row + 1][self.col + 1])
+
+
+			if self.row > 0 and not grid[self.row - 1][self.col + 1].is_barrier() and not grid[self.row - 1][self.col].is_barrier(): # down left
+				self.neighbors.append(grid[self.row - 1][self.col + 1])
+				print("Col:", self.col, "Row:", self.row)
+
+				
+					
+
+		if self.col > 0 and not grid[self.row][self.col - 1].is_barrier(): # up
 			self.neighbors.append(grid[self.row][self.col - 1])
+
+			if self.row > 0 and not grid[self.row - 1][self.col - 1].is_barrier() and not grid[self.row - 1][self.col].is_barrier(): # up left
+				self.neighbors.append(grid[self.row - 1][self.col - 1])
+			
+			if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col - 1].is_barrier() and not grid[self.row + 1][self.col].is_barrier(): # up right
+				self.neighbors.append(grid[self.row + 1][self.col - 1])
+				
+
+
+		if self.col == 9 and self.row == 12:
+			grid[self.row][self.col].color = (0,255,255)
+			for neighbor in self.neighbors:
+				print("\n")
+				print("Col:", neighbor.col, "Row:", neighbor.row)
+				print("---------------\n")
 
 	def __lt__(self, other):
 		return False
@@ -164,9 +194,9 @@ def custom_greedy(draw, grid, start, end):
 	h_score = {spot: float("inf") for row in grid for spot in row}
 	came_from = {}
 	while not open_pq.empty():
-		for event in pygame.event.get():
+		""" for event in pygame.event.get():
 			if event.type == pygame.QUIT:
-				pygame.quit()
+				pygame.quit() """
 
 		current = open_pq.get()[2]
 
@@ -306,6 +336,7 @@ def draw(win, grid, rows, width):
 	draw_grid(win, rows, width)
 	pygame.display.update()
 	#time.sleep(0.05)
+	#time.sleep(0.1)
 
 
 def load_map(grid, mapnum):
@@ -352,7 +383,7 @@ def main(win, width):
 	grid = make_grid(ROWS, width)
 	start = None
 	end = None
-	start, end = load_map(grid, 1)
+	start, end = load_map(grid, 3)
 
 
 
@@ -395,7 +426,6 @@ def main(win, width):
 					startTime = time.perf_counter()
 					bfs(lambda: draw(win, grid, ROWS, width), grid, start, end)
 					endTime = time.perf_counter()
-					print("\n")
 					print("Elapsed BFS time:", (endTime-startTime))
 					print("\n ---------------")
 
@@ -407,7 +437,6 @@ def main(win, width):
 					startTime = time.perf_counter()
 					dfs(lambda: draw(win, grid, ROWS, width), grid, start, end)
 					endTime = time.perf_counter()
-					print("\n")
 					print("Elapsed DFS time:", (endTime-startTime))
 					print("\n ---------------")
 				
@@ -419,7 +448,6 @@ def main(win, width):
 					startTime = time.perf_counter()
 					custom_greedy(lambda: draw(win, grid, ROWS, width), grid, start, end)
 					endTime = time.perf_counter()
-					print("\n")
 					print("Elapsed Custom Greedy time:", (endTime-startTime))
 					print("\n ---------------")
 
