@@ -91,12 +91,9 @@ class Spot:
 			if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col + 1].is_barrier() and not grid[self.row + 1][self.col].is_barrier(): # down right
 				self.neighbors.append(grid[self.row + 1][self.col + 1])
 
-
 			if self.row > 0 and not grid[self.row - 1][self.col + 1].is_barrier() and not grid[self.row - 1][self.col].is_barrier(): # down left
 				self.neighbors.append(grid[self.row - 1][self.col + 1])
-				print("Col:", self.col, "Row:", self.row)
 
-				
 					
 
 		if self.col > 0 and not grid[self.row][self.col - 1].is_barrier(): # up
@@ -108,14 +105,6 @@ class Spot:
 			if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col - 1].is_barrier() and not grid[self.row + 1][self.col].is_barrier(): # up right
 				self.neighbors.append(grid[self.row + 1][self.col - 1])
 				
-
-
-		if self.col == 9 and self.row == 12:
-			grid[self.row][self.col].color = (0,255,255)
-			for neighbor in self.neighbors:
-				print("\n")
-				print("Col:", neighbor.col, "Row:", neighbor.row)
-				print("---------------\n")
 
 	def __lt__(self, other):
 		return False
@@ -194,9 +183,9 @@ def custom_greedy(draw, grid, start, end):
 	h_score = {spot: float("inf") for row in grid for spot in row}
 	came_from = {}
 	while not open_pq.empty():
-		""" for event in pygame.event.get():
+		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
-				pygame.quit() """
+				pygame.quit()
 
 		current = open_pq.get()[2]
 
@@ -278,6 +267,7 @@ def dfs(draw, grid, start, end):
 			if event.type == pygame.QUIT:
 				pygame.quit()
 
+		
 		current = open_stack.get()
 
 		if current == end:
@@ -286,7 +276,7 @@ def dfs(draw, grid, start, end):
 			print("\n")
 			print("DFS path took", path_steps_count, "steps")
 			return True
-		
+				
 		for neighbor in current.neighbors:
 			if neighbor not in previous_spots:
 				count += 1
@@ -338,6 +328,15 @@ def draw(win, grid, rows, width):
 	#time.sleep(0.05)
 	#time.sleep(0.1)
 
+def get_clicked_pos(pos, rows, width):
+	gap = width // rows
+	y, x = pos
+
+	row = y // gap
+	col = x // gap
+
+	return row, col
+
 
 def load_map(grid, mapnum):
 	if mapnum == 1:
@@ -349,8 +348,13 @@ def load_map(grid, mapnum):
 
 	spot = grid[7][7]
 	
-	startX = 7
-	startY = 7
+	if mapnum == 1 or mapnum == 2:	
+		startX = 12
+		startY = 12
+	
+	else:
+		startX = 7
+		startY = 7
 
 	start = None
 	end = None
@@ -369,7 +373,10 @@ def load_map(grid, mapnum):
 				end = grid[startY][startX]
 			
 			startY += 1
-		startY = 7
+		if mapnum == 1 or mapnum == 2:
+			startY = 12
+		else:
+			startY = 7
 		startX +=1
 	f.close()
 	return start, end
@@ -394,6 +401,32 @@ def main(win, width):
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				run = False
+
+			
+			if pygame.mouse.get_pressed()[0]: # LEFT
+				pos = pygame.mouse.get_pos()
+				row, col = get_clicked_pos(pos, ROWS, width)
+				spot = grid[row][col]
+				if not start and spot != end:
+					start = spot
+					start.make_start()
+
+				elif not end and spot != start:
+					end = spot
+					end.make_end()
+
+				elif spot != end and spot != start:
+					spot.make_barrier()
+
+			elif pygame.mouse.get_pressed()[2]: # RIGHT
+				pos = pygame.mouse.get_pos()
+				row, col = get_clicked_pos(pos, ROWS, width)
+				spot = grid[row][col]
+				spot.reset()
+				if spot == start:
+					start = None
+				elif spot == end:
+					end = None
 
 
 
