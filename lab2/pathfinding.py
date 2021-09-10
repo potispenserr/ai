@@ -1,4 +1,4 @@
-from typing import Counter
+#from typing import Counter
 import pygame
 import math
 import os
@@ -110,17 +110,28 @@ class Spot:
 		return False
 
 
-def h(p1, p2):
+def h(p1, p2): # returns diagonal distance distance
+	""" x1, y1 = p1
+	x2, y2 = p2
+	return abs(x1 - x2) + abs(y1 - y2) """
+
 	x1, y1 = p1
 	x2, y2 = p2
-	return abs(x1 - x2) + abs(y1 - y2)
+	dx = abs(x1 - x2)
+	dy = abs(y1 - y2)
+	d = 1 # distance between spots
+	d2 = math.sqrt(2) # diagonal distance between spots
+
+	h = d * (dx + dy) + (d2 - 2 * d) * min(dx, dy)
+	return h
+
 
 
 def reconstruct_path(came_from, current, draw):
 	counter = 0
 	while current in came_from:
 		current = came_from[current]
-		if current.color == ORANGE:
+		if current.color == ORANGE: # stop at start
 			return counter
 		current.make_path()
 		counter += 1
@@ -128,9 +139,8 @@ def reconstruct_path(came_from, current, draw):
 
 
 def astar(draw, grid, start, end):
-	count = 0
-	open_set = queue.PriorityQueue()
-	open_set.put((0, count, start))
+	open_pq = queue.PriorityQueue()
+	open_pq.put((0, start))
 	came_from = {}
 	g_score = {spot: float("inf") for row in grid for spot in row}
 	g_score[start] = 0
@@ -139,17 +149,13 @@ def astar(draw, grid, start, end):
 
 	previous_spots = {start}
 
-	while not open_set.empty():
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				pygame.quit()
+	while not open_pq.empty():
 
-		current = open_set.get()[2]
+		current = open_pq.get()[1]
 		previous_spots.remove(current)
 
 		if current == end:
 			path_steps_count = reconstruct_path(came_from, end, draw)
-			end.make_end()
 			print("\n")
 			print("A* path took", path_steps_count, "steps")
 			return True
@@ -162,36 +168,31 @@ def astar(draw, grid, start, end):
 				g_score[neighbor] = temp_g_score
 				f_score[neighbor] = temp_g_score + h(neighbor.get_pos(), end.get_pos())
 				if neighbor not in previous_spots:
-					count += 1
-					open_set.put((f_score[neighbor], count, neighbor))
+					open_pq.put((f_score[neighbor], neighbor))
 					previous_spots.add(neighbor)
-					neighbor.make_open()
+					if(neighbor != end):
+						neighbor.make_open()
 
 		draw()
 
 		if current != start:
 			current.make_closed()
 
-	return False
+	return False # no path found
 
 
 def custom_greedy(draw, grid, start, end):
-	count = 0
 	open_pq = queue.PriorityQueue()
-	open_pq.put((0, count, start))
+	open_pq.put((0, start))
 	previous_spots = {start}
 	h_score = {spot: float("inf") for row in grid for spot in row}
 	came_from = {}
 	while not open_pq.empty():
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				pygame.quit()
 
-		current = open_pq.get()[2]
+		current = open_pq.get()[1]
 
 		if current == end:
 			path_steps_count = reconstruct_path(came_from, end, draw)
-			end.make_end()
 			print("\n")
 			print("Custom greedy path took", path_steps_count, "steps")
 			return True
@@ -203,30 +204,26 @@ def custom_greedy(draw, grid, start, end):
 				came_from[neighbor] = current
 				h_score[neighbor] = temp_h_score
 				if neighbor not in previous_spots:
-					count += 1
-					open_pq.put((h_score[neighbor], count, neighbor))
+					open_pq.put((h_score[neighbor], neighbor))
 					previous_spots.add(neighbor)
-					neighbor.make_open()
+					if(neighbor != end):
+						neighbor.make_open()
 		
 		draw()
 
 		if current != start:
 			current.make_closed()
 	
-	return False
+	return False # no path found
 
 
 
-def bfs(draw, grid, start, end):
-	count = 0
+def bfs(draw, start, end):
 	open_queue = queue.Queue()
 	open_queue.put(start)
 	previous_spots = {start}
 	came_from = {}
 	while not open_queue.empty():
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				pygame.quit()
 
 		current = open_queue.get()
 
@@ -239,10 +236,10 @@ def bfs(draw, grid, start, end):
 		
 		for neighbor in current.neighbors:
 			if neighbor not in previous_spots:
-				count += 1
 				open_queue.put(neighbor)
 				came_from[neighbor] = current
-				neighbor.make_open()
+				if(neighbor != end):
+					neighbor.make_open()
 				previous_spots.add(neighbor)
 		
 		draw()
@@ -250,24 +247,21 @@ def bfs(draw, grid, start, end):
 		if current != start:
 			current.make_closed()
 	
-	return False
+	return False # no path found
 
 
 
 
 
-def dfs(draw, grid, start, end):
-	count = 0
+def dfs(draw, start, end):
 	open_stack = queue.LifoQueue()
 	open_stack.put(start)
 	previous_spots = {start}
 	came_from = {}
 	while not open_stack.empty():
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				pygame.quit()
 
 		
+
 		current = open_stack.get()
 
 		if current == end:
@@ -279,18 +273,19 @@ def dfs(draw, grid, start, end):
 				
 		for neighbor in current.neighbors:
 			if neighbor not in previous_spots:
-				count += 1
 				open_stack.put(neighbor)
 				came_from[neighbor] = current
-				neighbor.make_open()
+				if(neighbor != end):
+					neighbor.make_open()
 				previous_spots.add(neighbor)
 		
 		draw()
 
 		if current != start:
 			current.make_closed()
+		
 	
-	return False
+	return False # no path found
 
 
 
@@ -326,7 +321,7 @@ def draw(win, grid, rows, width):
 	draw_grid(win, rows, width)
 	pygame.display.update()
 	#time.sleep(0.05)
-	#time.sleep(0.1)
+	#time.sleep(0.3)
 
 def get_clicked_pos(pos, rows, width):
 	gap = width // rows
@@ -380,7 +375,8 @@ def load_map(grid, mapnum):
 		startX +=1
 	f.close()
 	return start, end
-			
+
+
 
 		
 
@@ -403,7 +399,7 @@ def main(win, width):
 				run = False
 
 			
-			if pygame.mouse.get_pressed()[0]: # LEFT
+			if pygame.mouse.get_pressed()[0]: # left click
 				pos = pygame.mouse.get_pos()
 				row, col = get_clicked_pos(pos, ROWS, width)
 				spot = grid[row][col]
@@ -418,7 +414,7 @@ def main(win, width):
 				elif spot != end and spot != start:
 					spot.make_barrier()
 
-			elif pygame.mouse.get_pressed()[2]: # RIGHT
+			elif pygame.mouse.get_pressed()[2]: # right click
 				pos = pygame.mouse.get_pos()
 				row, col = get_clicked_pos(pos, ROWS, width)
 				spot = grid[row][col]
@@ -457,7 +453,7 @@ def main(win, width):
 							spot.update_neighbors(grid)
 
 					startTime = time.perf_counter()
-					bfs(lambda: draw(win, grid, ROWS, width), grid, start, end)
+					bfs(lambda: draw(win, grid, ROWS, width), start, end)
 					endTime = time.perf_counter()
 					print("Elapsed BFS time:", (endTime-startTime))
 					print("\n ---------------")
@@ -468,9 +464,9 @@ def main(win, width):
 							spot.update_neighbors(grid)
 
 					startTime = time.perf_counter()
-					dfs(lambda: draw(win, grid, ROWS, width), grid, start, end)
+					dfs(lambda: draw(win, grid, ROWS, width), start, end)
 					endTime = time.perf_counter()
-					print("Elapsed DFS time:", (endTime-startTime))
+					print("Elapsed DFS time map 1:", (endTime-startTime))
 					print("\n ---------------")
 				
 				elif event.key == pygame.K_g and start and end: # Custom Greedy
@@ -488,6 +484,7 @@ def main(win, width):
 					start = None
 					end = None
 					grid = make_grid(ROWS, width)
+
 
 	pygame.quit()
 
