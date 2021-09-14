@@ -70,9 +70,11 @@ class Spot:
 	def make_path(self):
 		self.color = PURPLE
 
-	def draw(self, win):
+	def draw(self, win): # draws the spot on the pygame window
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.width))
 
+	# adds walkable neighbors diagonally, up, down, left and right
+	# if a wall is next to a diagonal neighbor, the neighbor doesn't get added
 	def update_neighbors(self, grid):
 		self.neighbors = []
 
@@ -88,10 +90,10 @@ class Spot:
 		if self.col < self.total_rows - 1 and not grid[self.row][self.col + 1].is_barrier(): # down
 			self.neighbors.append(grid[self.row][self.col + 1])
 
-			if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col + 1].is_barrier() and not grid[self.row + 1][self.col].is_barrier(): # down right
+			if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col + 1].is_barrier() and not grid[self.row + 1][self.col].is_barrier(): # checks if down right is a wall and right is a wall
 				self.neighbors.append(grid[self.row + 1][self.col + 1])
 
-			if self.row > 0 and not grid[self.row - 1][self.col + 1].is_barrier() and not grid[self.row - 1][self.col].is_barrier(): # down left
+			if self.row > 0 and not grid[self.row - 1][self.col + 1].is_barrier() and not grid[self.row - 1][self.col].is_barrier(): # checks if down left is a wall and if left is a wall
 				self.neighbors.append(grid[self.row - 1][self.col + 1])
 
 					
@@ -99,10 +101,10 @@ class Spot:
 		if self.col > 0 and not grid[self.row][self.col - 1].is_barrier(): # up
 			self.neighbors.append(grid[self.row][self.col - 1])
 
-			if self.row > 0 and not grid[self.row - 1][self.col - 1].is_barrier() and not grid[self.row - 1][self.col].is_barrier(): # up left
+			if self.row > 0 and not grid[self.row - 1][self.col - 1].is_barrier() and not grid[self.row - 1][self.col].is_barrier(): # checks if up left is a wall and if left is a wall
 				self.neighbors.append(grid[self.row - 1][self.col - 1])
 			
-			if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col - 1].is_barrier() and not grid[self.row + 1][self.col].is_barrier(): # up right
+			if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col - 1].is_barrier() and not grid[self.row + 1][self.col].is_barrier(): # checks if up right is a wall and if right is a wall
 				self.neighbors.append(grid[self.row + 1][self.col - 1])
 				
 
@@ -110,11 +112,7 @@ class Spot:
 		return False
 
 
-<<<<<<< HEAD
-def h(p1, p2): # returns diagonal distance distance
-=======
-def h(p1, p2, start_pos): # returns manhattan distance
->>>>>>> master
+def h(p1, p2): # returns diagonal distance
 	""" x1, y1 = p1
 	x2, y2 = p2
 	return abs(x1 - x2) + abs(y1 - y2) """
@@ -142,21 +140,22 @@ def reconstruct_path(came_from, current, draw):
 		draw()
 
 
-def astar(draw, grid, start, end):
+def astar(draw, grid, start, end): 
 	open_pq = queue.PriorityQueue()
 	open_pq.put((0, start))
 	came_from = {}
+
 	g_score = {spot: float("inf") for row in grid for spot in row}
 	g_score[start] = 0
+
 	f_score = {spot: float("inf") for row in grid for spot in row}
-	f_score[start] = h(start.get_pos(), end.get_pos(), start.get_pos())
+	f_score[start] = h(start.get_pos(), end.get_pos())
 
 	previous_spots = {start}
 
 	while not open_pq.empty():
 
 		current = open_pq.get()[1]
-		previous_spots.remove(current)
 
 		if current == end:
 			path_steps_count = reconstruct_path(came_from, end, draw)
@@ -170,10 +169,12 @@ def astar(draw, grid, start, end):
 			if temp_g_score < g_score[neighbor]:
 				came_from[neighbor] = current
 				g_score[neighbor] = temp_g_score
-				f_score[neighbor] = temp_g_score + h(neighbor.get_pos(), end.get_pos(), start.get_pos())
+				f_score[neighbor] = temp_g_score + h(neighbor.get_pos(), end.get_pos())
+
 				if neighbor not in previous_spots:
 					open_pq.put((f_score[neighbor], neighbor))
 					previous_spots.add(neighbor)
+
 					if(neighbor != end):
 						neighbor.make_open()
 
@@ -202,14 +203,16 @@ def custom_greedy(draw, grid, start, end):
 			return True
 
 		for neighbor in current.neighbors:
-			temp_h_score = h(neighbor.get_pos(), end.get_pos(), start.get_pos())
+			temp_h_score = h(neighbor.get_pos(), end.get_pos())
 
 			if temp_h_score < h_score[neighbor]:
 				came_from[neighbor] = current
 				h_score[neighbor] = temp_h_score
+
 				if neighbor not in previous_spots:
 					open_pq.put((h_score[neighbor], neighbor))
 					previous_spots.add(neighbor)
+
 					if(neighbor != end):
 						neighbor.make_open()
 		
@@ -264,15 +267,7 @@ def dfs(draw, start, end):
 	came_from = {}
 	while not open_stack.empty():
 
-		
-
-<<<<<<< HEAD
 		current = open_stack.get()
-=======
-		current = open_stack.get(False, None)
-
-		
->>>>>>> master
 
 		if current == end:
 			path_steps_count = reconstruct_path(came_from, end, draw)
@@ -297,10 +292,7 @@ def dfs(draw, start, end):
 	
 	return False # no path found
 
-
-
-
-
+# creates a bunch of spots to append them to the grid list and returns the list after it's done
 def make_grid(rows, width):
 	grid = []
 	gap = width // rows
@@ -330,9 +322,9 @@ def draw(win, grid, rows, width):
 
 	draw_grid(win, rows, width)
 	pygame.display.update()
-	#time.sleep(0.05)
 	#time.sleep(0.3)
 
+	# returns clicked position with row and col coordinates
 def get_clicked_pos(pos, rows, width):
 	gap = width // rows
 	y, x = pos
@@ -342,7 +334,7 @@ def get_clicked_pos(pos, rows, width):
 
 	return row, col
 
-
+	# creates the map from a file and then returns the start and end point
 def load_map(grid, mapnum):
 	if mapnum == 1:
 		f = open("Map1.txt", "r")
@@ -350,8 +342,6 @@ def load_map(grid, mapnum):
 		f = open("Map2.txt", "r")
 	elif mapnum == 3:
 		f = open("Map3.txt", "r")
-
-	spot = grid[7][7]
 	
 	if mapnum == 1 or mapnum == 2:	
 		startX = 12
@@ -364,6 +354,7 @@ def load_map(grid, mapnum):
 	start = None
 	end = None
 	
+	# reads the file and makes a character a specific object
 	for line in f:
 		for char in line:
 			if char == "X":
