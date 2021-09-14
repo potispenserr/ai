@@ -110,7 +110,11 @@ class Spot:
 		return False
 
 
+<<<<<<< HEAD
 def h(p1, p2): # returns diagonal distance distance
+=======
+def h(p1, p2, start_pos): # returns manhattan distance
+>>>>>>> master
 	""" x1, y1 = p1
 	x2, y2 = p2
 	return abs(x1 - x2) + abs(y1 - y2) """
@@ -145,7 +149,7 @@ def astar(draw, grid, start, end):
 	g_score = {spot: float("inf") for row in grid for spot in row}
 	g_score[start] = 0
 	f_score = {spot: float("inf") for row in grid for spot in row}
-	f_score[start] = h(start.get_pos(), end.get_pos())
+	f_score[start] = h(start.get_pos(), end.get_pos(), start.get_pos())
 
 	previous_spots = {start}
 
@@ -166,7 +170,7 @@ def astar(draw, grid, start, end):
 			if temp_g_score < g_score[neighbor]:
 				came_from[neighbor] = current
 				g_score[neighbor] = temp_g_score
-				f_score[neighbor] = temp_g_score + h(neighbor.get_pos(), end.get_pos())
+				f_score[neighbor] = temp_g_score + h(neighbor.get_pos(), end.get_pos(), start.get_pos())
 				if neighbor not in previous_spots:
 					open_pq.put((f_score[neighbor], neighbor))
 					previous_spots.add(neighbor)
@@ -198,7 +202,7 @@ def custom_greedy(draw, grid, start, end):
 			return True
 
 		for neighbor in current.neighbors:
-			temp_h_score = h(neighbor.get_pos(), end.get_pos())
+			temp_h_score = h(neighbor.get_pos(), end.get_pos(), start.get_pos())
 
 			if temp_h_score < h_score[neighbor]:
 				came_from[neighbor] = current
@@ -262,7 +266,13 @@ def dfs(draw, start, end):
 
 		
 
+<<<<<<< HEAD
 		current = open_stack.get()
+=======
+		current = open_stack.get(False, None)
+
+		
+>>>>>>> master
 
 		if current == end:
 			path_steps_count = reconstruct_path(came_from, end, draw)
@@ -271,7 +281,7 @@ def dfs(draw, start, end):
 			print("DFS path took", path_steps_count, "steps")
 			return True
 				
-		for neighbor in current.neighbors:
+		for neighbor in current.neighbors[::-1]:
 			if neighbor not in previous_spots:
 				open_stack.put(neighbor)
 				came_from[neighbor] = current
