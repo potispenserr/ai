@@ -5,7 +5,7 @@ import os
 import queue
 import time
 
-WIDTH = 600
+WIDTH = 700
 WIN = pygame.display.set_mode((WIDTH, WIDTH))
 pygame.display.set_caption("Dumb AI tries to find the right way")
 
@@ -19,6 +19,10 @@ PURPLE = (128, 0, 128)
 ORANGE = (255, 165 ,0)
 GREY = (128, 128, 128)
 TURQUOISE = (64, 224, 208)
+DARK_GREEN = (9, 51, 0)
+LIGHT_BLUE = (124, 185, 232)
+ACID_GREEN = (176, 191, 26)
+BROWN = (179, 89, 0)
 
 class NPC:
 	def __init__(self, row, col, width, name):
@@ -27,7 +31,7 @@ class NPC:
 		self.x = row * width
 		self.y = col * width
 		self.width = width
-		self.color = BLUE
+		self.color = YELLOW
 		self.name = name
 
 
@@ -35,16 +39,24 @@ class NPC:
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.width))
 
 	def move_to_pos(self, grid, spot):
-		if(grid[self.row][self.col].type == "Floor"):
-			grid[self.row][self.col].color = WHITE
+		if(grid[self.row][self.col].type == "Ground"):
+			grid[self.row][self.col].color = BROWN
+		
+		if(grid[self.row][self.col].type == "Swamp"):
+			grid[self.row][self.col].color = ACID_GREEN
+		
+		if(grid[self.row][self.col].type == "Tree"):
+			grid[self.row][self.col].color = DARK_GREEN
 
 		self.row = spot.row
 		self.col = spot.col
-		time.sleep(0.07)
+		#time.sleep(0.07)
 
-		grid[self.row][self.col].color = BLUE
+		grid[self.row][self.col].color = YELLOW
 		pass
 		
+	def get_pos(self):
+		return self.row, self.col
 
 
 class Spot:
@@ -69,7 +81,7 @@ class Spot:
 		return self.color == GREEN
 
 	def is_barrier(self):
-		return self.color == BLACK
+		return self.type == "Wall" or self.type == "Mountain" or self.type == "Water"
 
 	def is_start(self):
 		return self.color == ORANGE
@@ -97,6 +109,21 @@ class Spot:
 
 	def make_path(self):
 		self.color = PURPLE
+	
+	def make_tree(self):
+		self.color = DARK_GREEN
+
+	def make_water(self):
+		self.color = LIGHT_BLUE
+	
+	def make_swamp(self):
+		self.color = ACID_GREEN
+	
+	def make_ground(self):
+		self.color = BROWN
+	
+	def make_mountain(self):
+		self.color = BLACK
 
 	def draw(self, win): # draws the spot on the pygame window
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.width))
@@ -150,11 +177,15 @@ def h(p1, p2): # returns diagonal distance
 	dx = abs(x1 - x2)
 	dy = abs(y1 - y2)
 	d = 1 # distance between spots
-	d2 = math.sqrt(2) # diagonal distance between spots
+	d2 = 1 # diagonal distance between spots
 
 	h = d * (dx + dy) + (d2 - 2 * d) * min(dx, dy)
 	return h
 
+def manhattan_distance(p1, p2):
+	x1, y1 = p1
+	x2, y2 = p2
+	return abs(x1 - x2) + abs(y1 - y2)
 
 
 def reconstruct_path(came_from, current, draw):
@@ -164,9 +195,9 @@ def reconstruct_path(came_from, current, draw):
 	while current in came_from:
 		list_to_path.append(current)
 		current = came_from[current]
-		if current.color == BLUE: # stop at start
+		if current.color == YELLOW: # stop at npc
 			return list_to_path
-		current.make_path()
+		#current.make_path()
 		counter += 1
 		draw()
 	return list_to_path
@@ -205,13 +236,13 @@ def astar(draw, grid, start, end):
 					open_pq.put((f_score[neighbor], neighbor))
 					previous_spots.add(neighbor)
 
-					if(neighbor != end):
-						neighbor.make_open()
+					""" if(neighbor != end):
+						neighbor.make_open() """
 
 		draw()
 
-		if current != start:
-			current.make_closed()
+		""" if current != start:
+			current.make_closed() """
 
 	return False # no path found
 
@@ -251,22 +282,74 @@ def custom_greedy(draw, grid, start, end):
 	
 	return False # no path found
 
+	#breadth first traversal
+def explore_wide(draw, start, npc, grid):
+	open_queue = queue.Queue()
+	open_queue.put(start)
+	previous_spots = {start}
+	while not open_queue.empty():
+
+		current = open_queue.get()
+		if(manhattan_distance(npc.get_pos(), current.get_pos()) < 2):
+			npc.move_to_pos(grid, current)
+		
+		else:
+			npcPosition = grid[npc.row][npc.col]
+			pathList = astar(draw, grid, npcPosition, current)
+
+			for spot in pathList[::-1]:
+				npc.move_to_pos(grid, spot)
+
+		reset_Spot(grid[npc.row + 1][npc.col]) # check right
+		reset_Spot(grid[npc.row - 1][npc.col]) # check left
+		reset_Spot(grid[npc.row][npc.col + 1]) # check down
+		reset_Spot(grid[npc.row][npc.col - 1]) # check up
+
+		reset_Spot(grid[npc.row + 1][npc.col + 1]) # check down right
+		reset_Spot(grid[npc.row - 1][npc.col + 1]) # check down left
+		reset_Spot(grid[npc.row - 1][npc.col - 1]) # check up left
+		reset_Spot(grid[npc.row + 1][npc.col - 1]) # check up right
+
+		
+
+		for neighbor in current.neighbors:
+			if neighbor not in previous_spots:
+				open_queue.put(neighbor)
+				previous_spots.add(neighbor)
+		
+		draw()
+
+		if current != start:
+			current.make_closed()
+	
+	return False # no path found
+
 	#depth first traversal
-def explore_deep(draw, start, npcList, visitedSpots):
+def explore_deep(draw, start, npc, visitedSpots, grid):
 	open_stack = queue.LifoQueue()
 	open_stack.put(start)
 	previous_spots = {start}
-	came_from = {}
 	while not open_stack.empty():
 
 		current = open_stack.get()
-		npcList[0].move_to_pos()
+		npc.move_to_pos(grid, current)
+
+		
+		reset_Spot(grid[npc.row + 1][npc.col]) # check right
+		reset_Spot(grid[npc.row - 1][npc.col]) # check left
+		reset_Spot(grid[npc.row][npc.col + 1]) # check down
+		reset_Spot(grid[npc.row][npc.col - 1]) # check up
+
+		reset_Spot(grid[npc.row + 1][npc.col + 1]) # check down right
+		reset_Spot(grid[npc.row - 1][npc.col + 1]) # check down left
+		reset_Spot(grid[npc.row - 1][npc.col - 1]) # check up left
+		reset_Spot(grid[npc.row + 1][npc.col - 1]) # check up right
 
 				
 		for neighbor in current.neighbors[::-1]:
 			if neighbor not in previous_spots:
+				
 				open_stack.put(neighbor)
-				came_from[neighbor] = current
 				previous_spots.add(neighbor)
 		
 		draw()
@@ -330,22 +413,14 @@ def get_clicked_pos(pos, rows, width):
 def load_map(grid, mapnum):
 	if mapnum == 1:
 		f = open("Map1.txt", "r")
-	elif mapnum == 2:
-		f = open("Map2.txt", "r")
-	elif mapnum == 3:
-		f = open("Map3.txt", "r")
 	
-	if mapnum == 1 or mapnum == 2:	
-		startX = 12
-		startY = 12
+	f = open("Map4.txt", "r")
 	
-	else:
-		startX = 7
-		startY = 7
+	startX = 0
+	startY = 0
 
 	start = None
 	end = None
-	
 	# reads the file and makes a character a specific object
 	for line in f:
 		for char in line:
@@ -360,15 +435,67 @@ def load_map(grid, mapnum):
 			if char == "G":
 				grid[startY][startX].make_end()
 				end = grid[startY][startX]
+
+			if char == "T":
+				grid[startY][startX].type = "Tree"
+				grid[startY][startX].color = GREY
 			
+			if char == "V":
+				grid[startY][startX].type = "Water"
+				grid[startY][startX].color = GREY
+			
+			if char == "G":
+				grid[startY][startX].type = "Swamp"
+				grid[startY][startX].color = GREY
+			
+			if char == "B":
+				grid[startY][startX].type = "Mountain"
+				grid[startY][startX].color = GREY
+			
+			if char == "M":
+				grid[startY][startX].type = "Ground"
+				grid[startY][startX].color = GREY
+
 			startY += 1
-		if mapnum == 1 or mapnum == 2:
-			startY = 12
-		else:
-			startY = 7
+		startY = 0
 		startX +=1
 	f.close()
 	return start, end
+
+
+def reset_map(grid):
+	for row in grid:
+		for spot in row:
+			if spot.type == "Tree":
+				spot.color = DARK_GREEN
+
+			if spot.type == "Swamp":
+				spot.color = ACID_GREEN
+
+			if spot.type == "Mountain":
+				spot.color = BLACK
+
+			if spot.type == "Water":
+				spot.color = LIGHT_BLUE
+
+			if spot.type == "Ground":
+				spot.color = BROWN
+
+def reset_Spot(spot):
+	if spot.type == "Tree":
+		spot.color = DARK_GREEN
+
+	if spot.type == "Swamp":
+		spot.color = ACID_GREEN
+
+	if spot.type == "Mountain":
+		spot.color = BLACK
+
+	if spot.type == "Water":
+		spot.color = LIGHT_BLUE
+
+	if spot.type == "Ground":
+		spot.color = BROWN
 
 
 
@@ -376,11 +503,11 @@ def load_map(grid, mapnum):
 
 
 def main(win, width):
-	ROWS = 40
+	ROWS = 100
 	grid = make_grid(ROWS, width)
 	start = None
 	end = None
-	start, end = load_map(grid, 3)
+	start, end = load_map(grid, 4)
 	oblivionNPCs = [NPC(23,23,width, "Imperial Guard")]
 	visitedSpots = []
 
@@ -440,17 +567,15 @@ def main(win, width):
 					print("Elapsed A* time:", (endTime-startTime))
 					print("\n ---------------")
 
-				elif event.key == pygame.K_b and start and end: # Breadth first
+				elif event.key == pygame.K_b and start and end: # Explore Wide
 					for row in grid:
 						for spot in row:
 							spot.update_neighbors(grid)
 
 					npcPosition = grid[oblivionNPCs[0].row][oblivionNPCs[0].col]
 					
-					for spot in pathList[::-1]:
-						oblivionNPCs[0].move_to_pos(grid, spot)
-						draw(win, grid, ROWS, width, oblivionNPCs)
-					end = None
+					print("yoo")
+					pathList = explore_wide(lambda: draw(win, grid, ROWS, width), npcPosition, oblivionNPCs[0], grid)
 
 				elif event.key == pygame.K_d and start and end: # Explore Deep
 					for row in grid:
@@ -458,7 +583,8 @@ def main(win, width):
 							spot.update_neighbors(grid)
 
 					npcPosition = grid[oblivionNPCs[0].row][oblivionNPCs[0].col]
-					pathList = explore_deep(lambda: draw(win, grid, ROWS, width), oblivionNPCs[0], visitedSpots)
+					print("yoo")
+					pathList = explore_deep(lambda: draw(win, grid, ROWS, width), npcPosition, oblivionNPCs[0], visitedSpots, grid)
 
 					
 				
@@ -488,11 +614,13 @@ def main(win, width):
 						oblivionNPCs[0].move_to_pos(grid, spot)
 						draw(win, grid, ROWS, width, oblivionNPCs)
 					end = None
+					reset_map(grid)
 
 				elif event.key == pygame.K_c: # clear
-					start = None
+					""" start = None
 					end = None
-					grid = make_grid(ROWS, width)
+					grid = make_grid(ROWS, width) """
+					reset_map(grid)
 
 
 	pygame.quit()
