@@ -7,7 +7,7 @@ import time
 
 WIDTH = 700
 WIN = pygame.display.set_mode((WIDTH, WIDTH))
-pygame.display.set_caption("Dumb AI tries to find the right way")
+pygame.display.set_caption("Dumb AI tries to make 5D chess moves")
 
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
@@ -53,14 +53,14 @@ class NPC:
 		#time.sleep(0.07)
 
 		grid[self.row][self.col].color = YELLOW
-		pass
+		
 		
 	def get_pos(self):
 		return self.row, self.col
 
 
 class Spot:
-	def __init__(self, row, col, width, total_rows, type):
+	def __init__(self, row, col, width, total_rows, type, trees_left = None):
 		self.row = row
 		self.col = col
 		self.x = row * width
@@ -70,6 +70,7 @@ class Spot:
 		self.width = width
 		self.total_rows = total_rows
 		self.type = type
+		self.trees_left = trees_left
 
 	def get_pos(self):
 		return self.row, self.col
@@ -287,30 +288,68 @@ def explore_wide(draw, start, npc, grid):
 	open_queue = queue.Queue()
 	open_queue.put(start)
 	previous_spots = {start}
+	resource_list = []
 	while not open_queue.empty():
+		for event in pygame.event.get():
+			if event.type == pygame.KEYDOWN:
+				if event.key == pygame.K_b:
+					return resource_list
 
 		current = open_queue.get()
-		if(manhattan_distance(npc.get_pos(), current.get_pos()) < 2):
+		if(manhattan_distance(npc.get_pos(), current.get_pos()) < 4):
 			npc.move_to_pos(grid, current)
 		
 		else:
 			npcPosition = grid[npc.row][npc.col]
-			pathList = astar(draw, grid, npcPosition, current)
+			pathList = astar(lambda:draw, grid, npcPosition, current)
 
 			for spot in pathList[::-1]:
 				npc.move_to_pos(grid, spot)
+				explore_spots(grid, npc)
+				draw()
 
-		reset_Spot(grid[npc.row + 1][npc.col]) # check right
-		reset_Spot(grid[npc.row - 1][npc.col]) # check left
-		reset_Spot(grid[npc.row][npc.col + 1]) # check down
-		reset_Spot(grid[npc.row][npc.col - 1]) # check up
+		explore_spots(grid, npc)
 
-		reset_Spot(grid[npc.row + 1][npc.col + 1]) # check down right
-		reset_Spot(grid[npc.row - 1][npc.col + 1]) # check down left
-		reset_Spot(grid[npc.row - 1][npc.col - 1]) # check up left
-		reset_Spot(grid[npc.row + 1][npc.col - 1]) # check up right
+		if current.type == "Tree":
+			print("TEAM TREEES")
+			resource_list.append(current)
+
 
 		
+		if grid[npc.row + 1][npc.col].type == "Tree":
+			print("TEAM TREEES")
+			resource_list.append(grid[npc.row + 1][npc.col])
+
+		elif grid[npc.row - 1][npc.col].type == "Tree":
+			print("TEAM TREEES")
+			resource_list.append(grid[npc.row - 1][npc.col])
+
+		elif grid[npc.row][npc.col + 1].type == "Tree":
+			print("TEAM TREEES")
+			resource_list.append(grid[npc.row][npc.col + 1])
+
+		elif grid[npc.row][npc.col - 1] == "Tree":
+			print("TEAM TREEES")
+			resource_list.append(grid[npc.row][npc.col - 1])
+
+
+		if grid[npc.row + 1][npc.col + 1] == "Tree":
+			print("TEAM TREEES")
+			resource_list.append(grid[npc.row + 1][npc.col + 1])
+
+		elif grid[npc.row - 1][npc.col + 1] == "Tree":
+			print("TEAM TREEES")
+			resource_list.append(grid[npc.row - 1][npc.col + 1])
+
+		elif grid[npc.row - 1][npc.col - 1] == "Tree":
+			print("TEAM TREEES")
+			resource_list.append(grid[npc.row - 1][npc.col - 1])
+
+		elif grid[npc.row + 1][npc.col - 1] == "Tree":
+			print("TEAM TREEES")
+			resource_list.append(grid[npc.row + 1][npc.col - 1])
+
+
 
 		for neighbor in current.neighbors:
 			if neighbor not in previous_spots:
@@ -318,11 +357,8 @@ def explore_wide(draw, start, npc, grid):
 				previous_spots.add(neighbor)
 		
 		draw()
+	return resource_list
 
-		if current != start:
-			current.make_closed()
-	
-	return False # no path found
 
 	#depth first traversal
 def explore_deep(draw, start, npc, visitedSpots, grid):
@@ -439,6 +475,7 @@ def load_map(grid, mapnum):
 			if char == "T":
 				grid[startY][startX].type = "Tree"
 				grid[startY][startX].color = GREY
+				grid[startY][startX].trees_left = 5
 			
 			if char == "V":
 				grid[startY][startX].type = "Water"
@@ -459,6 +496,9 @@ def load_map(grid, mapnum):
 			startY += 1
 		startY = 0
 		startX +=1
+
+		grid[19][20].type = "Tree"
+		grid[19][20].color = DARK_GREEN
 	f.close()
 	return start, end
 
@@ -498,6 +538,16 @@ def reset_Spot(spot):
 		spot.color = BROWN
 
 
+def explore_spots(grid, npc):
+	reset_Spot(grid[npc.row + 1][npc.col]) # check right
+	reset_Spot(grid[npc.row - 1][npc.col]) # check left
+	reset_Spot(grid[npc.row][npc.col + 1]) # check down
+	reset_Spot(grid[npc.row][npc.col - 1]) # check up
+
+	reset_Spot(grid[npc.row + 1][npc.col + 1]) # check down right
+	reset_Spot(grid[npc.row - 1][npc.col + 1]) # check down left
+	reset_Spot(grid[npc.row - 1][npc.col - 1]) # check up left
+	reset_Spot(grid[npc.row + 1][npc.col - 1]) # check up right
 
 		
 
@@ -510,6 +560,7 @@ def main(win, width):
 	start, end = load_map(grid, 4)
 	oblivionNPCs = [NPC(23,23,width, "Imperial Guard")]
 	visitedSpots = []
+	resource_list = []
 
 	run = True
 	while run:
@@ -522,6 +573,7 @@ def main(win, width):
 			if pygame.mouse.get_pressed()[0]: # left click
 				pos = pygame.mouse.get_pos()
 				row, col = get_clicked_pos(pos, ROWS, width)
+				print("Row:", row, "Col:", col)
 				spot = grid[row][col]
 				if not start and spot != end:
 					start = spot
@@ -567,6 +619,26 @@ def main(win, width):
 					print("Elapsed A* time:", (endTime-startTime))
 					print("\n ---------------")
 
+
+				elif event.key == pygame.K_t and start and end: # Find trees test
+					closest_tree_Spot = resource_list[0]
+					for spot in resource_list:
+						if(h(oblivionNPCs[0].get_pos(), spot.get_pos()) < h(oblivionNPCs[0].get_pos(), closest_tree_Spot.get_pos())):
+							closest_tree_Spot = spot
+
+					npcPosition = grid[oblivionNPCs[0].row][oblivionNPCs[0].col]
+					path_list = astar(lambda: draw(win, grid, ROWS, width), grid, npcPosition, closest_tree_Spot)
+					for spot in path_list[::-1]:
+						oblivionNPCs[0].move_to_pos(grid, spot)
+						draw(win, grid, ROWS, width, oblivionNPCs)
+					print("cutting down tree")
+					time.sleep(10)
+					grid[closest_tree_Spot.row][closest_tree_Spot.col].type = "Ground"
+					grid[closest_tree_Spot.row][closest_tree_Spot.col].color = BROWN
+					print("done")
+
+
+
 				elif event.key == pygame.K_b and start and end: # Explore Wide
 					for row in grid:
 						for spot in row:
@@ -574,8 +646,7 @@ def main(win, width):
 
 					npcPosition = grid[oblivionNPCs[0].row][oblivionNPCs[0].col]
 					
-					print("yoo")
-					pathList = explore_wide(lambda: draw(win, grid, ROWS, width), npcPosition, oblivionNPCs[0], grid)
+					resource_list = explore_wide(lambda: draw(win, grid, ROWS, width), npcPosition, oblivionNPCs[0], grid)
 
 				elif event.key == pygame.K_d and start and end: # Explore Deep
 					for row in grid:
@@ -583,10 +654,7 @@ def main(win, width):
 							spot.update_neighbors(grid)
 
 					npcPosition = grid[oblivionNPCs[0].row][oblivionNPCs[0].col]
-					print("yoo")
 					pathList = explore_deep(lambda: draw(win, grid, ROWS, width), npcPosition, oblivionNPCs[0], visitedSpots, grid)
-
-					
 				
 				elif event.key == pygame.K_g and start and end: # Custom Greedy
 					for row in grid:
