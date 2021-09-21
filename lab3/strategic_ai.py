@@ -93,6 +93,9 @@ class Spot:
 	def reset(self):
 		self.color = WHITE
 
+	def add_trees(self, trees):
+		self.trees_left = trees
+
 	def make_start(self):
 		self.color = ORANGE
 
@@ -169,11 +172,11 @@ class Spot:
 
 
 def h(p1, p2): # returns diagonal distance
-	""" x1, y1 = p1
-	x2, y2 = p2
-	return abs(x1 - x2) + abs(y1 - y2) """
-
 	x1, y1 = p1
+	x2, y2 = p2
+	return abs(x1 - x2) + abs(y1 - y2)
+
+	""" x1, y1 = p1
 	x2, y2 = p2
 	dx = abs(x1 - x2)
 	dy = abs(y1 - y2)
@@ -181,7 +184,7 @@ def h(p1, p2): # returns diagonal distance
 	d2 = 1 # diagonal distance between spots
 
 	h = d * (dx + dy) + (d2 - 2 * d) * min(dx, dy)
-	return h
+	return h """
 
 def manhattan_distance(p1, p2):
 	x1, y1 = p1
@@ -189,9 +192,7 @@ def manhattan_distance(p1, p2):
 	return abs(x1 - x2) + abs(y1 - y2)
 
 
-def reconstruct_path(came_from, current, draw):
-	counter = 0
-	
+def reconstruct_path(came_from, current, draw):	
 	list_to_path = []
 	while current in came_from:
 		list_to_path.append(current)
@@ -199,7 +200,6 @@ def reconstruct_path(came_from, current, draw):
 		if current.color == YELLOW: # stop at npc
 			return list_to_path
 		#current.make_path()
-		counter += 1
 		draw()
 	return list_to_path
 
@@ -237,13 +237,15 @@ def astar(draw, grid, start, end):
 					open_pq.put((f_score[neighbor], neighbor))
 					previous_spots.add(neighbor)
 
-					""" if(neighbor != end):
-						neighbor.make_open() """
+					if(neighbor != end):
+						#neighbor.make_open()
+						pass
 
 		draw()
 
-		""" if current != start:
-			current.make_closed() """
+		if current != start:
+			#current.make_closed()
+			pass
 
 	return False # no path found
 
@@ -288,12 +290,12 @@ def explore_wide(draw, start, npc, grid):
 	open_queue = queue.Queue()
 	open_queue.put(start)
 	previous_spots = {start}
-	resource_list = []
+	resource_pos_list = []
 	while not open_queue.empty():
 		for event in pygame.event.get():
 			if event.type == pygame.KEYDOWN:
 				if event.key == pygame.K_b:
-					return resource_list
+					return resource_pos_list
 
 		current = open_queue.get()
 		if(manhattan_distance(npc.get_pos(), current.get_pos()) < 4):
@@ -311,43 +313,53 @@ def explore_wide(draw, start, npc, grid):
 		explore_spots(grid, npc)
 
 		if current.type == "Tree":
-			print("TEAM TREEES")
-			resource_list.append(current)
+			if current not in resource_pos_list:
+				print("TEAM TREEES")
+				resource_pos_list.append(current)
 
 
 		
 		if grid[npc.row + 1][npc.col].type == "Tree":
-			print("TEAM TREEES")
-			resource_list.append(grid[npc.row + 1][npc.col])
+			if grid[npc.row + 1][npc.col] not in resource_pos_list:
+				print("TEAM TREEES")
+				resource_pos_list.append(grid[npc.row + 1][npc.col])
 
 		elif grid[npc.row - 1][npc.col].type == "Tree":
-			print("TEAM TREEES")
-			resource_list.append(grid[npc.row - 1][npc.col])
+			if grid[npc.row - 1][npc.col] not in resource_pos_list:
+				print("TEAM TREEES")
+				resource_pos_list.append(grid[npc.row - 1][npc.col])
 
 		elif grid[npc.row][npc.col + 1].type == "Tree":
-			print("TEAM TREEES")
-			resource_list.append(grid[npc.row][npc.col + 1])
+			if grid[npc.row][npc.col + 1] not in resource_pos_list:
+				print("TEAM TREEES")
+				resource_pos_list.append(grid[npc.row][npc.col + 1])
+				
 
 		elif grid[npc.row][npc.col - 1] == "Tree":
-			print("TEAM TREEES")
-			resource_list.append(grid[npc.row][npc.col - 1])
+			if grid[npc.row][npc.col - 1] not in resource_pos_list:
+				print("TEAM TREEES")
+				resource_pos_list.append(grid[npc.row][npc.col - 1])
 
 
 		if grid[npc.row + 1][npc.col + 1] == "Tree":
-			print("TEAM TREEES")
-			resource_list.append(grid[npc.row + 1][npc.col + 1])
+			if grid[npc.row + 1][npc.col + 1] not in resource_pos_list:
+				print("TEAM TREEES")
+				resource_pos_list.append(grid[npc.row + 1][npc.col + 1])
 
 		elif grid[npc.row - 1][npc.col + 1] == "Tree":
-			print("TEAM TREEES")
-			resource_list.append(grid[npc.row - 1][npc.col + 1])
+			if grid[npc.row - 1][npc.col + 1] not in resource_pos_list:
+				print("TEAM TREEES")
+				resource_pos_list.append(grid[npc.row - 1][npc.col + 1])
 
 		elif grid[npc.row - 1][npc.col - 1] == "Tree":
-			print("TEAM TREEES")
-			resource_list.append(grid[npc.row - 1][npc.col - 1])
+			if grid[npc.row - 1][npc.col - 1] not in resource_pos_list:
+				print("TEAM TREEES")
+				resource_pos_list.append(grid[npc.row - 1][npc.col - 1])
 
 		elif grid[npc.row + 1][npc.col - 1] == "Tree":
-			print("TEAM TREEES")
-			resource_list.append(grid[npc.row + 1][npc.col - 1])
+			if grid[npc.row + 1][npc.col - 1] not in resource_pos_list:
+				print("TEAM TREEES")
+				resource_pos_list.append(grid[npc.row + 1][npc.col - 1])
 
 
 
@@ -357,7 +369,7 @@ def explore_wide(draw, start, npc, grid):
 				previous_spots.add(neighbor)
 		
 		draw()
-	return resource_list
+	return resource_pos_list
 
 
 	#depth first traversal
@@ -468,14 +480,14 @@ def load_map(grid, mapnum):
 				grid[startY][startX].make_start()
 				start = grid[startY][startX]
 
-			if char == "G":
+			if char == "K":
 				grid[startY][startX].make_end()
 				end = grid[startY][startX]
 
 			if char == "T":
 				grid[startY][startX].type = "Tree"
 				grid[startY][startX].color = GREY
-				grid[startY][startX].trees_left = 5
+				grid[startY][startX].add_trees(5)
 			
 			if char == "V":
 				grid[startY][startX].type = "Water"
@@ -499,6 +511,7 @@ def load_map(grid, mapnum):
 
 		grid[19][20].type = "Tree"
 		grid[19][20].color = DARK_GREEN
+		grid[19][20].trees_left = 5
 	f.close()
 	return start, end
 
@@ -521,6 +534,9 @@ def reset_map(grid):
 			if spot.type == "Ground":
 				spot.color = BROWN
 
+			if spot.type == "Building":
+				spot.color = WHITE
+
 def reset_Spot(spot):
 	if spot.type == "Tree":
 		spot.color = DARK_GREEN
@@ -536,6 +552,9 @@ def reset_Spot(spot):
 
 	if spot.type == "Ground":
 		spot.color = BROWN
+	
+	if spot.type == "Building":
+		spot.color = WHITE
 
 
 def explore_spots(grid, npc):
@@ -560,8 +579,16 @@ def main(win, width):
 	start, end = load_map(grid, 4)
 	oblivionNPCs = [NPC(23,23,width, "Imperial Guard")]
 	visitedSpots = []
-	resource_list = []
+	resource_pos_list = []
+	resource_storage_dict = {
+		"Wood": 0
+	}
+	interest_spots_dict = {
+		"Storage": grid[23][24]
 
+	}
+	grid[23][23].type = "Building"
+	
 	run = True
 	while run:
 		draw(win, grid, ROWS, width, oblivionNPCs)
@@ -613,29 +640,48 @@ def main(win, width):
 						for spot in row:
 							spot.update_neighbors(grid)
 
+					npcPosition = grid[oblivionNPCs[0].row][oblivionNPCs[0].col]
 					startTime = time.perf_counter()
-					astar(lambda: draw(win, grid, ROWS, width), grid, start, end)
+					astar(lambda: draw(win, grid, ROWS, width), grid, npcPosition, end)
 					endTime = time.perf_counter()
 					print("Elapsed A* time:", (endTime-startTime))
 					print("\n ---------------")
 
 
 				elif event.key == pygame.K_t and start and end: # Find trees test
-					closest_tree_Spot = resource_list[0]
-					for spot in resource_list:
-						if(h(oblivionNPCs[0].get_pos(), spot.get_pos()) < h(oblivionNPCs[0].get_pos(), closest_tree_Spot.get_pos())):
-							closest_tree_Spot = spot
+					closest_tree_Spot = interest_spots_dict["Trees"][0]
+					for spot in interest_spots_dict["Trees"]:
+							if(h(oblivionNPCs[0].get_pos(), spot.get_pos()) < h(oblivionNPCs[0].get_pos(), closest_tree_Spot.get_pos())):
+								closest_tree_Spot = spot
 
 					npcPosition = grid[oblivionNPCs[0].row][oblivionNPCs[0].col]
 					path_list = astar(lambda: draw(win, grid, ROWS, width), grid, npcPosition, closest_tree_Spot)
 					for spot in path_list[::-1]:
 						oblivionNPCs[0].move_to_pos(grid, spot)
 						draw(win, grid, ROWS, width, oblivionNPCs)
+
 					print("cutting down tree")
-					time.sleep(10)
-					grid[closest_tree_Spot.row][closest_tree_Spot.col].type = "Ground"
-					grid[closest_tree_Spot.row][closest_tree_Spot.col].color = BROWN
+					time.sleep(5)
+					closest_tree_Spot.trees_left -= 1
+					if(closest_tree_Spot.trees_left <= 0):
+						grid[closest_tree_Spot.row][closest_tree_Spot.col].type = "Ground"
+						grid[closest_tree_Spot.row][closest_tree_Spot.col].color = BROWN
+						for spot in interest_spots_dict["Trees"]:
+							if closest_tree_Spot == spot:
+								interest_spots_dict["Trees"].remove(spot)
+								print("removed tree")
+
 					print("done")
+
+					print("moving this shit to storage")
+					npcPosition = grid[oblivionNPCs[0].row][oblivionNPCs[0].col]
+					storage_location = interest_spots_dict["Storage"]
+					path_list = astar(lambda: draw(win, grid, ROWS, width), grid, npcPosition, storage_location)
+					for spot in path_list[::-1]:
+						oblivionNPCs[0].move_to_pos(grid, spot)
+						draw(win, grid, ROWS, width, oblivionNPCs)
+					resource_storage_dict["Wood"] += 1
+
 
 
 
@@ -644,9 +690,12 @@ def main(win, width):
 						for spot in row:
 							spot.update_neighbors(grid)
 
+					print(interest_spots_dict)
 					npcPosition = grid[oblivionNPCs[0].row][oblivionNPCs[0].col]
-					
-					resource_list = explore_wide(lambda: draw(win, grid, ROWS, width), npcPosition, oblivionNPCs[0], grid)
+					if not "Trees" in interest_spots_dict:
+						interest_spots_dict["Trees"] = explore_wide(lambda: draw(win, grid, ROWS, width), npcPosition, oblivionNPCs[0], grid)
+					else:
+						interest_spots_dict["Trees"].append(explore_wide(lambda: draw(win, grid, ROWS, width), npcPosition, oblivionNPCs[0], grid))
 
 				elif event.key == pygame.K_d and start and end: # Explore Deep
 					for row in grid:
@@ -688,6 +737,7 @@ def main(win, width):
 					""" start = None
 					end = None
 					grid = make_grid(ROWS, width) """
+					end = None
 					reset_map(grid)
 
 
