@@ -642,25 +642,83 @@ def gather_resource(resource_type, interest_spots_dict, npc, grid, resource_stor
 	elif(resource_type == "Iron"):
 		resource_storage_dict["Iron"] += 1
 
-def build_building():
-	if resource_storage_dict["Wood"] >= 2:
-		print("starting to build")
-		build_Spot = None
-		for spot in discovered_Spots:
-			if(h(spot.get_pos(), interest_spots_dict["Storage"].get_pos()) < 30 and grid[spot.row][spot.col].type == "Ground"):
-				build_Spot = spot
-				break
-		
-		interest_spots_dict["Kiln"].append(build_Spot)
-		find_walk_path(grid, lambda: draw(win, grid, ROWS, width), oblivionNPCs[0], build_Spot)
-		grid[build_Spot.row][build_Spot.col].type = "Building"
-		resource_storage_dict["Wood"] -= 2
-		time.sleep(2)
-		print("Kiln as been built at Row:", build_Spot.row, "Col: ", build_Spot.col)
+def build_building(building_type, resource_storage_dict, interest_Spots_dict, discovered_Spots, grid, npc, draw):
+	if(building_type == "Kiln"): # Kiln
+		if resource_storage_dict["Wood"] >= 2:
+			print("starting to build kiln")
+			build_Spot = None
+			for spot in discovered_Spots:
+				if(h(spot.get_pos(), interest_Spots_dict["Storage"].get_pos()) < 30 and grid[spot.row][spot.col].type == "Ground"):
+					build_Spot = spot
+					break
+			
+			interest_Spots_dict["Kiln"].append(build_Spot)
+			find_walk_path(grid, draw, npc, build_Spot)
+			grid[build_Spot.row][build_Spot.col].type = "Building"
+			resource_storage_dict["Wood"] -= 2
+			time.sleep(2)
+			print("Kiln as been built at Row:", build_Spot.row, "Col: ", build_Spot.col)
+		else:
+			print("not enough wood to build kiln")
 
 
-	else:
-		print("not enough wood")
+
+	elif(building_type == "Smithy"): # Smithy
+		if resource_storage_dict["Wood"] >= 2 and resource_storage_dict["Iron bars"] >= 1:
+			print("starting to build smithy")
+			build_Spot = None
+			for spot in discovered_Spots:
+				if(h(spot.get_pos(), interest_Spots_dict["Storage"].get_pos()) < 30 and grid[spot.row][spot.col].type == "Ground"):
+					build_Spot = spot
+					break
+			
+			interest_Spots_dict["Smithy"].append(build_Spot)
+			find_walk_path(grid, draw, npc, build_Spot)
+			grid[build_Spot.row][build_Spot.col].type = "Building"
+			resource_storage_dict["Wood"] -= 2
+			time.sleep(2)
+			print("Smithy as been built at Row:", build_Spot.row, "Col: ", build_Spot.col)
+		else:
+			print("not enough wood to build smithy")
+
+
+
+	elif(building_type == "Forge"): # Forge
+		if resource_storage_dict["Wood"] >= 2:
+			print("starting to build forge")
+			build_Spot = None
+			for spot in discovered_Spots:
+				if(h(spot.get_pos(), interest_Spots_dict["Storage"].get_pos()) < 30 and grid[spot.row][spot.col].type == "Ground"):
+					build_Spot = spot
+					break
+			
+			interest_Spots_dict["Forge"].append(build_Spot)
+			find_walk_path(grid, draw, npc, build_Spot)
+			grid[build_Spot.row][build_Spot.col].type = "Building"
+			resource_storage_dict["Wood"] -= 2
+			time.sleep(2)
+			print("Forge as been built at Row:", build_Spot.row, "Col: ", build_Spot.col)
+		else:
+			print("not enough wood to build forge")
+
+	elif(building_type == "Training Camp"): # Training Camp
+		if resource_storage_dict["Wood"] >= 2:
+			print("starting to build training camp")
+			build_Spot = None
+			for spot in discovered_Spots:
+				if(h(spot.get_pos(), interest_Spots_dict["Storage"].get_pos()) < 30 and grid[spot.row][spot.col].type == "Ground"):
+					build_Spot = spot
+					break
+			
+			interest_Spots_dict["Training Camp"].append(build_Spot)
+			find_walk_path(grid, draw, npc, build_Spot)
+			grid[build_Spot.row][build_Spot.col].type = "Building"
+			resource_storage_dict["Wood"] -= 2
+			time.sleep(2)
+			print("Training Camp as been built at Row:", build_Spot.row, "Col: ", build_Spot.col)
+		else:
+			print("not enough wood to build training camp")
+
 
 
 
@@ -707,13 +765,18 @@ def main(win, width):
 	resource_storage_dict = {
 		"Wood": 0,
 		"Iron": 0,
-		"Charcoal": 0
+		"Charcoals": 0,
+		"Iron bars": 0,
+		"Swords": 0
 	}
 	interest_spots_dict = {}
 	interest_spots_dict.setdefault("Storage", grid[23][24])
 	interest_spots_dict.setdefault("Tree", [])
 	interest_spots_dict.setdefault("Iron", [])
 	interest_spots_dict.setdefault("Kiln", [])
+	interest_spots_dict.setdefault("Forge", [])
+	interest_spots_dict.setdefault("Smithy", [])
+	interest_spots_dict.setdefault("Training Camp", [])
 
 	
 	grid[23][24].type = "Building"
@@ -786,24 +849,7 @@ def main(win, width):
 					gather_resource("Iron", interest_spots_dict, oblivionNPCs[0], grid, resource_storage_dict, lambda: draw(win, grid, ROWS, width))
 
 				elif event.key == pygame.K_k and start and end: # Build charcoal kiln
-					if resource_storage_dict["Wood"] >= 2:
-						print("starting to build")
-						build_Spot = None
-						for spot in discovered_Spots:
-							if(h(spot.get_pos(), interest_spots_dict["Storage"].get_pos()) < 30 and grid[spot.row][spot.col].type == "Ground"):
-								build_Spot = spot
-								break
-						
-						interest_spots_dict["Kiln"].append(build_Spot)
-						find_walk_path(grid, lambda: draw(win, grid, ROWS, width), oblivionNPCs[0], build_Spot)
-						grid[build_Spot.row][build_Spot.col].type = "Building"
-						resource_storage_dict["Wood"] -= 2
-						time.sleep(2)
-						print("Kiln as been built at Row:", build_Spot.row, "Col: ", build_Spot.col)
-
-					
-					else:
-						print("not enough wood")
+					build_building("Kiln", resource_storage_dict, interest_spots_dict, discovered_Spots, grid, oblivionNPCs[0], lambda: draw(win, grid, ROWS, width))
 
 				elif event.key == pygame.K_l and start and end: # Produce charcoal
 					if not interest_spots_dict["Kiln"]:
@@ -822,7 +868,7 @@ def main(win, width):
 						time.sleep(3)
 						print("The charcoal is now done roasting")
 						resource_storage_dict["Wood"] -= 1
-						resource_storage_dict["Charcoal"] += 1
+						resource_storage_dict["Charcoals"] += 1
 					
 					
 
