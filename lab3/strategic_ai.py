@@ -295,7 +295,7 @@ def custom_greedy(draw, grid, start, end):
 	return False # no path found
 
 	#breadth first traversal
-def explore_wide(draw, start, npc, grid):
+def explore_wide(draw, start, npc, grid, discovered_Spots):
 	open_queue = queue.Queue()
 	open_queue.put(start)
 	previous_spots = {start}
@@ -306,8 +306,7 @@ def explore_wide(draw, start, npc, grid):
 		for event in pygame.event.get():
 			if event.type == pygame.KEYDOWN:
 				if event.key == pygame.K_b:
-					print(resource_pos_dict)
-					return resource_pos_dict
+					return resource_pos_dict, discovered_Spots
 
 		current = open_queue.get()
 		if(manhattan_distance(npc.get_pos(), current.get_pos()) < 4):
@@ -319,10 +318,17 @@ def explore_wide(draw, start, npc, grid):
 
 			for spot in pathList[::-1]:
 				npc.move_to_pos(grid, spot)
-				explore_spots(grid, npc)
+				if spot not in discovered_Spots:
+					discovered_Spots.append(explore_spots(grid, npc))
 				draw()
 
-		explore_spots(grid, npc)
+		discovered_surrounding_Spots = explore_spots(grid, npc)
+		for spot in discovered_surrounding_Spots:
+			if spot not in discovered_Spots:
+				discovered_Spots.append(spot)
+
+		if current not in discovered_Spots:
+			discovered_Spots.append(current)
 
 		if current.is_resource()[0]:
 			resource_type = current.is_resource()[1]
@@ -463,6 +469,7 @@ def draw(win, grid, rows, width, npclist = None):
 	if(npclist != None):
 		for npc in npclist:
 			grid[npc.row][npc.col].color = npc.color
+			pass
 
 	pygame.display.update()
 	#time.sleep(0.3)
@@ -600,7 +607,7 @@ def gather_resource(resource_type, interest_spots_dict, npc, grid, resource_stor
 		print("cutting down tree")
 	if(resource_type == "Iron"):
 		print("mining iron")
-	time.sleep(5)
+	time.sleep(3)
 	
 	if(resource_type == "Tree"):
 		closest_resource_Spot.trees_left -= 1
@@ -635,10 +642,40 @@ def gather_resource(resource_type, interest_spots_dict, npc, grid, resource_stor
 	elif(resource_type == "Iron"):
 		resource_storage_dict["Iron"] += 1
 
+def build_building():
+	if resource_storage_dict["Wood"] >= 2:
+		print("starting to build")
+		build_Spot = None
+		for spot in discovered_Spots:
+			if(h(spot.get_pos(), interest_spots_dict["Storage"].get_pos()) < 30 and grid[spot.row][spot.col].type == "Ground"):
+				build_Spot = spot
+				break
+		
+		interest_spots_dict["Kiln"].append(build_Spot)
+		find_walk_path(grid, lambda: draw(win, grid, ROWS, width), oblivionNPCs[0], build_Spot)
+		grid[build_Spot.row][build_Spot.col].type = "Building"
+		resource_storage_dict["Wood"] -= 2
+		time.sleep(2)
+		print("Kiln as been built at Row:", build_Spot.row, "Col: ", build_Spot.col)
+
+
+	else:
+		print("not enough wood")
 
 
 
 def explore_spots(grid, npc):
+	discovered_Spots = []
+	discovered_Spots.append(grid[npc.row + 1][npc.col])
+	discovered_Spots.append(grid[npc.row - 1][npc.col])
+	discovered_Spots.append(grid[npc.row][npc.col + 1])
+	discovered_Spots.append(grid[npc.row][npc.col - 1])
+
+	discovered_Spots.append(grid[npc.row + 1][npc.col + 1])
+	discovered_Spots.append(grid[npc.row - 1][npc.col + 1])
+	discovered_Spots.append(grid[npc.row - 1][npc.col - 1])
+	discovered_Spots.append(grid[npc.row + 1][npc.col - 1])
+
 	reset_Spot(grid[npc.row + 1][npc.col]) # check right
 	reset_Spot(grid[npc.row - 1][npc.col]) # check left
 	reset_Spot(grid[npc.row][npc.col + 1]) # check down
@@ -648,8 +685,14 @@ def explore_spots(grid, npc):
 	reset_Spot(grid[npc.row - 1][npc.col + 1]) # check down left
 	reset_Spot(grid[npc.row - 1][npc.col - 1]) # check up left
 	reset_Spot(grid[npc.row + 1][npc.col - 1]) # check up right
+	return discovered_Spots
 
-		
+def find_walk_path(grid, draw, npc, end_Spot):
+	npcPosition = grid[npc.row][npc.col]
+	path_list = astar(lambda: draw, grid, npcPosition, end_Spot)
+	for spot in path_list[::-1]:
+		npc.move_to_pos(grid, spot)
+		draw()
 
 
 def main(win, width):
@@ -659,16 +702,18 @@ def main(win, width):
 	end = None
 	start, end = load_map(grid, 4)
 	oblivionNPCs = [NPC(23,23,width, "Imperial Guard")]
-	visitedSpots = []
+	discovered_Spots = []
 	resource_pos_list = []
 	resource_storage_dict = {
 		"Wood": 0,
-		"Iron": 0
+		"Iron": 0,
+		"Charcoal": 0
 	}
 	interest_spots_dict = {}
 	interest_spots_dict.setdefault("Storage", grid[23][24])
 	interest_spots_dict.setdefault("Tree", [])
 	interest_spots_dict.setdefault("Iron", [])
+	interest_spots_dict.setdefault("Kiln", [])
 
 	
 	grid[23][24].type = "Building"
@@ -739,6 +784,46 @@ def main(win, width):
 
 				elif event.key == pygame.K_i and start and end: # Find and mine iron
 					gather_resource("Iron", interest_spots_dict, oblivionNPCs[0], grid, resource_storage_dict, lambda: draw(win, grid, ROWS, width))
+
+				elif event.key == pygame.K_k and start and end: # Build charcoal kiln
+					if resource_storage_dict["Wood"] >= 2:
+						print("starting to build")
+						build_Spot = None
+						for spot in discovered_Spots:
+							if(h(spot.get_pos(), interest_spots_dict["Storage"].get_pos()) < 30 and grid[spot.row][spot.col].type == "Ground"):
+								build_Spot = spot
+								break
+						
+						interest_spots_dict["Kiln"].append(build_Spot)
+						find_walk_path(grid, lambda: draw(win, grid, ROWS, width), oblivionNPCs[0], build_Spot)
+						grid[build_Spot.row][build_Spot.col].type = "Building"
+						resource_storage_dict["Wood"] -= 2
+						time.sleep(2)
+						print("Kiln as been built at Row:", build_Spot.row, "Col: ", build_Spot.col)
+
+					
+					else:
+						print("not enough wood")
+
+				elif event.key == pygame.K_l and start and end: # Produce charcoal
+					if not interest_spots_dict["Kiln"]:
+						print("No charcoal kiln has been built")
+					elif resource_storage_dict["Wood"] < 1:
+						print("There's not enough wood to make charcoal")
+
+					else:
+						print("going to charcoal kiln")
+						closest_kiln = interest_spots_dict["Kiln"][0]
+						for spot in interest_spots_dict["Kiln"]:
+								if(h(oblivionNPCs[0].get_pos(), spot.get_pos()) < h(oblivionNPCs[0].get_pos(), closest_kiln.get_pos())):
+									closest_kiln = spot
+						find_walk_path(grid, lambda: draw(win, grid, ROWS, width), oblivionNPCs[0], closest_kiln)
+						print("Putting wood in the kiln")
+						time.sleep(3)
+						print("The charcoal is now done roasting")
+						resource_storage_dict["Wood"] -= 1
+						resource_storage_dict["Charcoal"] += 1
+					
 					
 
 
@@ -749,9 +834,9 @@ def main(win, width):
 
 					print(interest_spots_dict)
 					npcPosition = grid[oblivionNPCs[0].row][oblivionNPCs[0].col]
-					discovered_spots_dict = explore_wide(lambda: draw(win, grid, ROWS, width), npcPosition, oblivionNPCs[0], grid)
-					for key in discovered_spots_dict.keys():
-						for val in discovered_spots_dict[key]:
+					discovered_resource_spots_dict, discovered_Spots = explore_wide(lambda: draw(win, grid, ROWS, width), npcPosition, oblivionNPCs[0], grid, discovered_Spots)
+					for key in discovered_resource_spots_dict.keys():
+						for val in discovered_resource_spots_dict[key]:
 							interest_spots_dict[key].append(val)
 
 
