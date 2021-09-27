@@ -37,23 +37,30 @@ class NPC:
 		self.width = width
 		self.color = YELLOW
 		self.name = name
+		self.job = "Worker"
+		self.path_list = queue.Queue()
+		self.going_to_Spot = None
+		self.current_state = None
 
 
 	def draw(self, win):
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.width))
 
-	def move_to_pos(self, grid, spot):
+	def go_to_Spot(self, grid, spot):
 		reset_Spot(grid[self.row][self.col])
 
 		self.row = spot.row
 		self.col = spot.col
-		#time.sleep(0.07)
+		time.sleep(0.07)
 
 		grid[self.row][self.col].color = YELLOW
 		
 		
 	def get_pos(self):
 		return self.row, self.col
+	
+	def change_job(self, new_job):
+		self.job = new_job
 
 
 class Spot:
@@ -295,7 +302,7 @@ def custom_greedy(draw, grid, start, end):
 	return False # no path found
 
 	#breadth first traversal
-def explore_wide(draw, start, npc, grid, discovered_Spots):
+def explore_wide(draw, start, npcs, grid, discovered_Spots):
 	open_queue = queue.Queue()
 	open_queue.put(start)
 	previous_spots = {start}
@@ -308,93 +315,105 @@ def explore_wide(draw, start, npc, grid, discovered_Spots):
 				if event.key == pygame.K_b:
 					return resource_pos_dict, discovered_Spots
 
-		current = open_queue.get()
-		if(manhattan_distance(npc.get_pos(), current.get_pos()) < 4):
-			npc.move_to_pos(grid, current)
-		
-		else:
-			npcPosition = grid[npc.row][npc.col]
-			pathList = astar(lambda:draw, grid, npcPosition, current)
+		for npc in npcs:
+			current = open_queue.get()
+			if(manhattan_distance(npc.get_pos(), current.get_pos()) < 4):
+				npc.go_to_Spot(grid, current)
+			
+			else:
+				npcSpot = grid[npc.row][npc.col]
+				pathList = astar(lambda:draw, grid, npcSpot, current)
+				npc.path_list = pathList
 
-			for spot in pathList[::-1]:
-				npc.move_to_pos(grid, spot)
+				for spot in pathList[::-1]:
+					npc.path_list = queue.Queue()
+					npc.path_list.put(spot)
+				
+				if npc.path_list:
+					next_Spot = npc.path_list.get()
+					npc.go_to_Spot(grid, next_Spot)
+					if next_Spot not in discovered_Spots:
+						discovered_Spots.append()
+						discovered_Spots.append(explore_spots(grid, npc))
+				
+				""" npc.go_to_Spot(grid, spot)
 				if spot not in discovered_Spots:
 					discovered_Spots.append(explore_spots(grid, npc))
-				draw()
+				draw() """
 
-		discovered_surrounding_Spots = explore_spots(grid, npc)
-		for spot in discovered_surrounding_Spots:
-			if spot not in discovered_Spots:
-				discovered_Spots.append(spot)
+			discovered_surrounding_Spots = explore_spots(grid, npc)
+			for spot in discovered_surrounding_Spots:
+				if spot not in discovered_Spots:
+					discovered_Spots.append(spot)
 
-		if current not in discovered_Spots:
-			discovered_Spots.append(current)
+			if current not in discovered_Spots:
+				discovered_Spots.append(current)
 
-		if current.is_resource()[0]:
-			resource_type = current.is_resource()[1]
-			if current not in resource_pos_dict[resource_type]:
-				resource_pos_dict[resource_type].append(current)
-
-
-		
-		if grid[npc.row + 1][npc.col].is_resource()[0]:
-			resource_type = grid[npc.row + 1][npc.col].is_resource()[1]
-			if grid[npc.row + 1][npc.col] not in resource_pos_dict[resource_type]:
-				print(resource_type)
-				resource_pos_dict[resource_type].append(grid[npc.row + 1][npc.col])
-
-		elif grid[npc.row - 1][npc.col].is_resource()[0]:
-			resource_type = grid[npc.row - 1][npc.col].is_resource()[1]
-			if grid[npc.row - 1][npc.col] not in resource_pos_dict[resource_type]:
-				print(resource_type)
-				resource_pos_dict[resource_type].append(grid[npc.row - 1][npc.col])
-
-		elif grid[npc.row][npc.col + 1].is_resource()[0]:
-			resource_type = grid[npc.row][npc.col + 1].is_resource()[1]
-			if grid[npc.row][npc.col + 1] not in resource_pos_dict[resource_type]:
-				print(resource_type)
-				resource_pos_dict[resource_type].append(grid[npc.row][npc.col + 1])
-				
-
-		elif grid[npc.row][npc.col - 1].is_resource()[0]:
-			resource_type = grid[npc.row][npc.col - 1].is_resource()[1]
-			if grid[npc.row][npc.col - 1] not in resource_pos_dict[resource_type]:
-				print(resource_type)
-				resource_pos_dict[resource_type].append(grid[npc.row][npc.col - 1])
+			if current.is_resource()[0]:
+				resource_type = current.is_resource()[1]
+				if current not in resource_pos_dict[resource_type]:
+					resource_pos_dict[resource_type].append(current)
 
 
-		if grid[npc.row + 1][npc.col + 1].is_resource()[0]:
-			resource_type = grid[npc.row + 1][npc.col + 1].is_resource()[1]
-			if grid[npc.row + 1][npc.col + 1] not in resource_pos_dict[resource_type]:
-				print(resource_type)
-				resource_pos_dict[resource_type].append(grid[npc.row + 1][npc.col + 1])
+			
+			if grid[npc.row + 1][npc.col].is_resource()[0]:
+				resource_type = grid[npc.row + 1][npc.col].is_resource()[1]
+				if grid[npc.row + 1][npc.col] not in resource_pos_dict[resource_type]:
+					print(resource_type)
+					resource_pos_dict[resource_type].append(grid[npc.row + 1][npc.col])
 
-		elif grid[npc.row - 1][npc.col + 1].is_resource()[0]:
-			resource_type = grid[npc.row - 1][npc.col + 1].is_resource()[1]
-			if grid[npc.row - 1][npc.col + 1] not in resource_pos_dict[resource_type]:
-				print(resource_type)
-				resource_pos_dict[resource_type].append(grid[npc.row - 1][npc.col + 1])
+			elif grid[npc.row - 1][npc.col].is_resource()[0]:
+				resource_type = grid[npc.row - 1][npc.col].is_resource()[1]
+				if grid[npc.row - 1][npc.col] not in resource_pos_dict[resource_type]:
+					print(resource_type)
+					resource_pos_dict[resource_type].append(grid[npc.row - 1][npc.col])
 
-		elif grid[npc.row - 1][npc.col - 1].is_resource()[0]:
-			resource_type = grid[npc.row - 1][npc.col - 1].is_resource()[1]
-			if grid[npc.row - 1][npc.col - 1] not in resource_pos_dict[resource_type]:
-				print(resource_type)
-				resource_pos_dict[resource_type].append(grid[npc.row - 1][npc.col - 1])
+			elif grid[npc.row][npc.col + 1].is_resource()[0]:
+				resource_type = grid[npc.row][npc.col + 1].is_resource()[1]
+				if grid[npc.row][npc.col + 1] not in resource_pos_dict[resource_type]:
+					print(resource_type)
+					resource_pos_dict[resource_type].append(grid[npc.row][npc.col + 1])
+					
 
-		elif grid[npc.row + 1][npc.col - 1].is_resource()[0]:
-			resource_type = grid[npc.row + 1][npc.col - 1].is_resource()[1]
-			if grid[npc.row + 1][npc.col - 1] not in resource_pos_dict[resource_type]:
-				print(resource_type)
-				resource_pos_dict[resource_type].append(grid[npc.row + 1][npc.col - 1])
+			elif grid[npc.row][npc.col - 1].is_resource()[0]:
+				resource_type = grid[npc.row][npc.col - 1].is_resource()[1]
+				if grid[npc.row][npc.col - 1] not in resource_pos_dict[resource_type]:
+					print(resource_type)
+					resource_pos_dict[resource_type].append(grid[npc.row][npc.col - 1])
+
+
+			if grid[npc.row + 1][npc.col + 1].is_resource()[0]:
+				resource_type = grid[npc.row + 1][npc.col + 1].is_resource()[1]
+				if grid[npc.row + 1][npc.col + 1] not in resource_pos_dict[resource_type]:
+					print(resource_type)
+					resource_pos_dict[resource_type].append(grid[npc.row + 1][npc.col + 1])
+
+			elif grid[npc.row - 1][npc.col + 1].is_resource()[0]:
+				resource_type = grid[npc.row - 1][npc.col + 1].is_resource()[1]
+				if grid[npc.row - 1][npc.col + 1] not in resource_pos_dict[resource_type]:
+					print(resource_type)
+					resource_pos_dict[resource_type].append(grid[npc.row - 1][npc.col + 1])
+
+			elif grid[npc.row - 1][npc.col - 1].is_resource()[0]:
+				resource_type = grid[npc.row - 1][npc.col - 1].is_resource()[1]
+				if grid[npc.row - 1][npc.col - 1] not in resource_pos_dict[resource_type]:
+					print(resource_type)
+					resource_pos_dict[resource_type].append(grid[npc.row - 1][npc.col - 1])
+
+			elif grid[npc.row + 1][npc.col - 1].is_resource()[0]:
+				resource_type = grid[npc.row + 1][npc.col - 1].is_resource()[1]
+				if grid[npc.row + 1][npc.col - 1] not in resource_pos_dict[resource_type]:
+					print(resource_type)
+					resource_pos_dict[resource_type].append(grid[npc.row + 1][npc.col - 1])
 
 
 
-		for neighbor in current.neighbors:
-			if neighbor not in previous_spots:
-				open_queue.put(neighbor)
-				previous_spots.add(neighbor)
-		
-		draw()
+			for neighbor in current.neighbors:
+				if neighbor not in previous_spots:
+					open_queue.put(neighbor)
+					previous_spots.add(neighbor)
+			
+			draw()
 	print(resource_pos_dict)
 	return resource_pos_dict
 
@@ -407,7 +426,7 @@ def explore_deep(draw, start, npc, visitedSpots, grid):
 	while not open_stack.empty():
 
 		current = open_stack.get()
-		npc.move_to_pos(grid, current)
+		npc.go_to_Spot(grid, current)
 
 		
 		reset_Spot(grid[npc.row + 1][npc.col]) # check right
@@ -506,8 +525,12 @@ def load_map(grid, mapnum):
 				grid[startY][startX].type = "Wall"
 
 			if char == "S":
-				grid[startY][startX].make_start()
-				start = grid[startY][startX]
+				grid[startY][startX].type = "Ground"
+				grid[startY][startX].color = BROWN
+			
+			if char == "H":
+				grid[startY][startX].type = "Building"
+				grid[startY][startX].color = PURPLE
 
 			if char == "K":
 				grid[startY][startX].make_end()
@@ -589,6 +612,17 @@ def reset_map(grid):
 		for spot in row:
 			reset_Spot(spot)
 
+def go_to_school(npc, draw, school_Spot, grid, education_type):
+	npcSpot = grid[npc.row][npc.col]
+	path_list = astar(lambda: draw, grid, npcSpot, school_Spot)
+	for spot in path_list[::-1]:
+		npc.go_to_Spot(grid, spot)
+		draw()
+	print("I'm becoming a", education_type)
+	time.sleep(3)
+	npc.change_job(education_type)
+	print("I became a", npc.job)
+
 
 
 def gather_resource(resource_type, interest_spots_dict, npc, grid, resource_storage_dict, draw):
@@ -600,7 +634,7 @@ def gather_resource(resource_type, interest_spots_dict, npc, grid, resource_stor
 	npcPosition = grid[npc.row][npc.col]
 	path_list = astar(lambda: draw, grid, npcPosition, closest_resource_Spot)
 	for spot in path_list[::-1]:
-		npc.move_to_pos(grid, spot)
+		npc.go_to_Spot(grid, spot)
 		draw()
 
 	if(resource_type == "Tree"):
@@ -634,7 +668,7 @@ def gather_resource(resource_type, interest_spots_dict, npc, grid, resource_stor
 	storage_location = interest_spots_dict["Storage"]
 	path_list = astar(lambda: draw, grid, npcPosition, storage_location)
 	for spot in path_list[::-1]:
-		npc.move_to_pos(grid, spot)
+		npc.go_to_Spot(grid, spot)
 		draw()
 	if(resource_type == "Tree"):
 		resource_storage_dict["Wood"] += 1
@@ -749,7 +783,7 @@ def find_walk_path(grid, draw, npc, end_Spot):
 	npcPosition = grid[npc.row][npc.col]
 	path_list = astar(lambda: draw, grid, npcPosition, end_Spot)
 	for spot in path_list[::-1]:
-		npc.move_to_pos(grid, spot)
+		npc.go_to_Spot(grid, spot)
 		draw()
 
 
@@ -760,6 +794,7 @@ def main(win, width):
 	end = None
 	start, end = load_map(grid, 4)
 	oblivionNPCs = [NPC(23,23,width, "Imperial Guard")]
+	oblivionNPCs.append(NPC(24,23,width, "Just Guard"))
 	discovered_Spots = []
 	resource_pos_list = []
 	resource_storage_dict = {
@@ -771,6 +806,7 @@ def main(win, width):
 	}
 	interest_spots_dict = {}
 	interest_spots_dict.setdefault("Storage", grid[23][24])
+	interest_spots_dict.setdefault("School", grid[24][24])
 	interest_spots_dict.setdefault("Tree", [])
 	interest_spots_dict.setdefault("Iron", [])
 	interest_spots_dict.setdefault("Kiln", [])
@@ -780,6 +816,7 @@ def main(win, width):
 
 	
 	grid[23][24].type = "Building"
+	grid[24][24].type = "Building"
 
 
 	
@@ -874,17 +911,19 @@ def main(win, width):
 
 
 				elif event.key == pygame.K_b and start and end: # Explore Wide
-					for row in grid:
-						for spot in row:
-							spot.update_neighbors(grid)
+					for npc in oblivionNPCs:
+						for row in grid:
+							for spot in row:
+								spot.update_neighbors(grid)
 
-					print(interest_spots_dict)
-					npcPosition = grid[oblivionNPCs[0].row][oblivionNPCs[0].col]
-					discovered_resource_spots_dict, discovered_Spots = explore_wide(lambda: draw(win, grid, ROWS, width), npcPosition, oblivionNPCs[0], grid, discovered_Spots)
-					for key in discovered_resource_spots_dict.keys():
-						for val in discovered_resource_spots_dict[key]:
-							interest_spots_dict[key].append(val)
+						npcSpot = grid[npc.row][npc.col]
+						discovered_resource_spots_dict, discovered_Spots = explore_wide(lambda: draw(win, grid, ROWS, width), npcSpot, oblivionNPCs, grid, discovered_Spots)
+						for key in discovered_resource_spots_dict.keys():
+							for val in discovered_resource_spots_dict[key]:
+								interest_spots_dict[key].append(val)
 
+				elif event.key == pygame.K_s and start and end: # Go to school
+					go_to_school(oblivionNPCs[0], lambda: draw(win, grid, ROWS, width), interest_spots_dict["School"], grid, "Explorer")
 
 				elif event.key == pygame.K_d and start and end: # Explore Deep
 					for row in grid:
@@ -892,7 +931,7 @@ def main(win, width):
 							spot.update_neighbors(grid)
 
 					npcPosition = grid[oblivionNPCs[0].row][oblivionNPCs[0].col]
-					pathList = explore_deep(lambda: draw(win, grid, ROWS, width), npcPosition, oblivionNPCs[0], visitedSpots, grid)
+					pathList = explore_deep(lambda: draw(win, grid, ROWS, width), npcPosition, oblivionNPCs[0], discovered_Spots, grid)
 				
 				elif event.key == pygame.K_g and start and end: # Custom Greedy
 					for row in grid:
@@ -903,7 +942,7 @@ def main(win, width):
 					pathList = custom_greedy(lambda: draw(win, grid, ROWS, width), grid, npcPosition, end)
 					
 					for spot in pathList[::-1]:
-						oblivionNPCs[0].move_to_pos(grid, spot)
+						oblivionNPCs[0].go_to_Spot(grid, spot)
 						draw(win, grid, ROWS, width, oblivionNPCs)
 					end = None
 				
@@ -917,7 +956,7 @@ def main(win, width):
 					pathList = astar(lambda: draw(win, grid, ROWS, width), grid, npcPosition, end)
 
 					for spot in pathList[::-1]:
-						oblivionNPCs[0].move_to_pos(grid, spot)
+						oblivionNPCs[0].go_to_Spot(grid, spot)
 						draw(win, grid, ROWS, width, oblivionNPCs)
 					end = None
 					reset_map(grid)
