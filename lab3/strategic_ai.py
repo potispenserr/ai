@@ -106,7 +106,7 @@ class NPC:
 					self.current_state = "Exploring"
 
 		if self.current_state == "Going to school":
-			if self.schooling_left < 0:
+			if self.schooling_left <= 1:
 				self.current_state = ""
 				print(self.name, "became a", self.job)
 
@@ -857,6 +857,16 @@ def find_walk_path(grid, draw, npc, end_Spot):
 		draw()
 
 
+def update_dicts(main_interest_Spots_dict, npcList):
+	for npc in npcList:
+		for key in npc.resource_pos_dict.keys():
+			if len(npc.resource_pos_dict[key]) > len(main_interest_Spots_dict[key]): # efficiency
+				for val in npc.resource_pos_dict[key]:
+					if val not in main_interest_Spots_dict[key]:
+						main_interest_Spots_dict[key].append(val)
+	pass
+
+
 def main(win, width):
 	ROWS = 100
 	grid = []
@@ -867,7 +877,7 @@ def main(win, width):
 	start, end, discovered_Spots = load_map(grid, 4)
 	oblivionNPCs = [NPC(24,24,width, "Imperial Guard")]
 	oblivionNPCs.append(NPC(22,22,width, "Just Guard"))
-	resource_pos_list = []
+	#resource_pos_list = []
 	resource_storage_dict = {
 		"Wood": 0,
 		"Iron": 0,
@@ -997,15 +1007,19 @@ def main(win, width):
 								interest_spots_dict[key].append(val)
 				
 				elif event.key == pygame.K_g: # multi character testing
-					for shit in range(1000):
+					for shit in range(100):
 						for npc in oblivionNPCs:
 							npc.update(grid)
 							draw(win, grid, ROWS, width, oblivionNPCs)
+							if npc.job == "Explorer":
+								update_dicts(interest_spots_dict, oblivionNPCs)
 				
-				elif event.key == pygame.K_u: # update testing
+				elif event.key == pygame.K_u: # singlestepping update
 					for npc in oblivionNPCs:
 						npc.update(grid)
 						draw(win, grid, ROWS, width, oblivionNPCs)
+						if npc.job == "Explorer":
+							update_dicts(interest_spots_dict, oblivionNPCs)
 
 
 
