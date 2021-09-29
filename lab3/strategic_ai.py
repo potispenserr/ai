@@ -42,17 +42,19 @@ class NPC:
 		self.path_queue = queue.Queue()
 		self.open_queue = queue.Queue()
 		self.next_Spot = Spot
+		self.previous_state = ""
 		self.current_state = ""
 		self.resource_pos_dict = {}
 		self.resource_pos_dict.setdefault("Tree", [])
 		self.resource_pos_dict.setdefault("Iron", [])
 		self.discovered_Spots = []
+		self.schooling_left = 20
 
 
 	def draw(self, win):
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.width))
 
-	def go_to_Spot(self, grid, spot):
+	def go_to_Spot_instantly(self, grid, spot):
 		reset_Spot(grid[self.row][self.col])
 
 		self.row = spot.row
@@ -60,6 +62,9 @@ class NPC:
 		time.sleep(0.07)
 
 		grid[self.row][self.col].color = YELLOW
+
+	def move_to_Spot(self, grid, spot):
+		pass
 		
 		
 	def get_pos(self):
@@ -67,20 +72,24 @@ class NPC:
 	
 	def change_job(self, new_job):
 		self.job = new_job
+
+	def change_state(self, new_state):
+		self.previous_state = self.current_state
+		self.current_state = new_state
 	
 	def update(self, grid):
 
 		if self.current_state == "Exploring":
 			explore_wide(self, grid, self.discovered_Spots)
 			if(manhattan_distance(self.get_pos(), self.next_Spot.get_pos()) < 2):
-				self.go_to_Spot(grid, self.next_Spot)
+				self.go_to_Spot_instantly(grid, self.next_Spot)
 
 			else:
 				path_list = astar(grid, grid[self.row][self.col], self.next_Spot)
 				for spot in path_list[::-1]:
 					self.path_queue.put(spot)
 				self.next_Spot = self.path_queue.get()
-				self.go_to_Spot(grid, self.next_Spot)
+				self.go_to_Spot_instantly(grid, self.next_Spot)
 				self.current_state = "Moving along path"
 				return
 		
@@ -88,11 +97,32 @@ class NPC:
 			if not self.path_queue.empty():
 				self.next_Spot = self.path_queue.get()
 				self.discovered_Spots = explore_spots(grid, self, self.resource_pos_dict)
-				self.go_to_Spot(grid, self.next_Spot)
+				self.go_to_Spot_instantly(grid, self.next_Spot)
 			else:
-				self.current_state = "Exploring"
+				if self.previous_state == "Going to school":
+					self.change_state("Going to school")
+
+				else:
+					self.current_state = "Exploring"
+
+		if self.current_state == "Going to school":
+			if self.schooling_left < 0:
+				self.current_state = ""
+				print(self.name, "became a", self.job)
+
+				# when character becomes a explorer put the current position in the open queue so breadth first search
+				# has something to work with
+				if self.job == "Explorer": 
+					self.open_queue.put(grid[self.row][self.col])
+					self.change_state("Exploring")
+
+			else:
+				self.schooling_left -= 1
+				print(self.name, "has", self.schooling_left, "study time left")
+
 		elif self.current_state == "":
-			print("not much going on here")
+			#print("not much going on here")
+			pass
 
 
 class Spot:
@@ -360,12 +390,12 @@ def explore_wide(npc, grid, discovered_Spots):
 		
 		if npc.path_list:
 			next_Spot = npc.path_list.get()
-			npc.go_to_Spot(grid, next_Spot)
+			npc.go_to_Spot_instantly(grid, next_Spot)
 			if next_Spot not in discovered_Spots:
 				discovered_Spots.append()
 				discovered_Spots.append(explore_spots(grid, npc)) """
 		
-		""" npc.go_to_Spot(grid, spot)
+		""" npc.go_to_Spot_instantly(grid, spot)
 		if spot not in discovered_Spots:
 			discovered_Spots.append(explore_spots(grid, npc))
 		draw() """
@@ -405,7 +435,7 @@ def explore_deep(draw, start, npc, visitedSpots, grid):
 	while not open_stack.empty():
 
 		current = open_stack.get()
-		npc.go_to_Spot(grid, current)
+		npc.go_to_Spot_instantly(grid, current)
 
 		
 		reset_Spot(grid[npc.row + 1][npc.col]) # check right
@@ -592,16 +622,23 @@ def reset_map(grid):
 		for spot in row:
 			reset_Spot(spot)
 
-def go_to_school(npc, draw, school_Spot, grid, education_type):
+def go_to_school(npc, school_Spot, grid, education_type):
 	npcSpot = grid[npc.row][npc.col]
-	path_list = astar(lambda: draw, grid, npcSpot, school_Spot)
+	path_list = astar(grid, npcSpot, school_Spot)
 	for spot in path_list[::-1]:
-		npc.go_to_Spot(grid, spot)
+		npc.path_queue.put(spot)
+
+	npc.previous_state = "Going to school"
+	npc.current_state = "Moving along path"
+	npc.change_job(education_type)
+	""" for spot in path_list[::-1]:
+		npc.go_to_Spot_instantly(grid, spot)
 		draw()
 	print("I'm becoming a", education_type)
 	time.sleep(3)
 	npc.change_job(education_type)
-	print("I became a", npc.job)
+	print("I became a", npc.job) """
+
 
 
 
@@ -614,7 +651,7 @@ def gather_resource(resource_type, interest_spots_dict, npc, grid, resource_stor
 	npcPosition = grid[npc.row][npc.col]
 	path_list = astar(lambda: draw, grid, npcPosition, closest_resource_Spot)
 	for spot in path_list[::-1]:
-		npc.go_to_Spot(grid, spot)
+		npc.go_to_Spot_instantly(grid, spot)
 		draw()
 
 	if(resource_type == "Tree"):
@@ -648,7 +685,7 @@ def gather_resource(resource_type, interest_spots_dict, npc, grid, resource_stor
 	storage_location = interest_spots_dict["Storage"]
 	path_list = astar(lambda: draw, grid, npcPosition, storage_location)
 	for spot in path_list[::-1]:
-		npc.go_to_Spot(grid, spot)
+		npc.go_to_Spot_instantly(grid, spot)
 		draw()
 	if(resource_type == "Tree"):
 		resource_storage_dict["Wood"] += 1
@@ -816,7 +853,7 @@ def find_walk_path(grid, draw, npc, end_Spot):
 	npcPosition = grid[npc.row][npc.col]
 	path_list = astar(lambda: draw, grid, npcPosition, end_Spot)
 	for spot in path_list[::-1]:
-		npc.go_to_Spot(grid, spot)
+		npc.go_to_Spot_instantly(grid, spot)
 		draw()
 
 
@@ -824,8 +861,8 @@ def main(win, width):
 	ROWS = 100
 	grid = []
 	make_grid(ROWS, width, grid)
-	start = None
-	end = None
+	start = Spot
+	end = Spot
 	discovered_Spots = []
 	start, end, discovered_Spots = load_map(grid, 4)
 	oblivionNPCs = [NPC(24,24,width, "Imperial Guard")]
@@ -848,23 +885,22 @@ def main(win, width):
 	interest_spots_dict.setdefault("Smithy", [])
 	interest_spots_dict.setdefault("Training Camp", [])
 
-	for npc in oblivionNPCs:
-		npc.open_queue.put(grid[npc.row][npc.col])
-
-	oblivionNPCs[0].current_state = "Exploring"
 	for row in grid:
 		for spot in row:
 			spot.update_neighbors(grid)
-
 
 	
 	run = True
 	while run:
 		draw(win, grid, ROWS, width, oblivionNPCs)
+
+		""" for npc in oblivionNPCs:
+			npc.update(grid)
+			draw(win, grid, ROWS, width, oblivionNPCs) """
+		
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				run = False
-
 			
 			""" if pygame.mouse.get_pressed()[0]: # left click
 				pos = pygame.mouse.get_pos()
@@ -965,10 +1001,17 @@ def main(win, width):
 						for npc in oblivionNPCs:
 							npc.update(grid)
 							draw(win, grid, ROWS, width, oblivionNPCs)
+				
+				elif event.key == pygame.K_u: # update testing
+					for npc in oblivionNPCs:
+						npc.update(grid)
+						draw(win, grid, ROWS, width, oblivionNPCs)
 
 
-				elif event.key == pygame.K_s and start and end: # Go to school
-					go_to_school(oblivionNPCs[0], lambda: draw(win, grid, ROWS, width), interest_spots_dict["School"], grid, "Explorer")
+
+				elif event.key == pygame.K_s: # Go to school
+					go_to_school(oblivionNPCs[0], interest_spots_dict["School"], grid, "Explorer")
+
 
 				elif event.key == pygame.K_d and start and end: # Explore Deep
 					for row in grid:
@@ -987,7 +1030,7 @@ def main(win, width):
 					pathList = custom_greedy(lambda: draw(win, grid, ROWS, width), grid, npcPosition, end)
 					
 					for spot in pathList[::-1]:
-						oblivionNPCs[0].go_to_Spot(grid, spot)
+						oblivionNPCs[0].go_to_Spot_instantly(grid, spot)
 						draw(win, grid, ROWS, width, oblivionNPCs)
 					end = None
 				
@@ -1001,7 +1044,7 @@ def main(win, width):
 					pathList = astar(lambda: draw(win, grid, ROWS, width), grid, npcPosition, end)
 
 					for spot in pathList[::-1]:
-						oblivionNPCs[0].go_to_Spot(grid, spot)
+						oblivionNPCs[0].go_to_Spot_instantly(grid, spot)
 						draw(win, grid, ROWS, width, oblivionNPCs)
 					end = None
 					reset_map(grid)
@@ -1012,6 +1055,8 @@ def main(win, width):
 					grid = make_grid(ROWS, width) """
 					end = None
 					reset_map(grid)
+
+			
 
 
 	pygame.quit()
