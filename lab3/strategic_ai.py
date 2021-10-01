@@ -41,13 +41,14 @@ class NPC:
 		self.job = "Worker"
 		self.path_queue = queue.Queue()
 		self.open_queue = queue.Queue()
+		self.task_queue = queue.Queue()
 		self.next_Spot = Spot
 		self.previous_state = ""
 		self.current_state = ""
 		self.resource_pos_dict = {}
 		self.resource_pos_dict.setdefault("Tree", [])
 		self.resource_pos_dict.setdefault("Iron", [])
-		self.discovered_Spots = []
+		self.discovered_Spots = {}
 		self.previous_Spots = []
 		self.schooling_left = 20
 		self.resource_gathering_timer = 30
@@ -99,21 +100,14 @@ class NPC:
 				self.current_state = "Moving along path"
 				return
 		
-		if self.current_state == "Moving along path":
+		if self.current_state == "Moving along path": #Move along path
 			if not self.path_queue.empty():
 				self.next_Spot = self.path_queue.get()
-				self.discovered_Spots = explore_spots(grid, self, self.resource_pos_dict)
+				explore_spots(grid, self, self.resource_pos_dict)
 				self.go_to_Spot_instantly(grid, self.next_Spot)
 				self.previous_Spots.append(self.next_Spot)
 			else:
-				""" if self.previous_state == "Going to school":
-					self.change_state("Going to school")
-				
-				elif self.previous_state == "Cutting down a tree":
-					self.change_state("Cutting")
 
-				else:
-					self.current_state = "Exploring" """
 				self.change_state(self.previous_state)
 
 		if self.current_state == "Going to school":
@@ -125,6 +119,7 @@ class NPC:
 				# has something to work with
 				if self.job == "Explorer": 
 					self.open_queue.put(grid[self.row][self.col])
+					self.discovered_Spots.setdefault(grid[self.row][self.col], 1)
 					self.change_state("Exploring")
 					self.previous_Spots.append(grid[self.row][self.col])
 
@@ -132,7 +127,7 @@ class NPC:
 				self.schooling_left -= 1
 				print(self.name, "has", self.schooling_left, "study time left")
 		
-		if self.current_state == "Cutting down a tree":
+		if self.current_state == "Cutting down a tree": # Tree cutting
 			if self.resource_gathering_timer > 0:
 				self.resource_gathering_timer -= 1
 				print("Tree timer:", self.resource_gathering_timer)
@@ -157,7 +152,7 @@ class NPC:
 				self.previous_state = "Taking resource to storage"
 				self.current_state = "Moving along path"
 
-		if self.current_state == "Mining iron":
+		if self.current_state == "Mining iron": # Iron mining
 			if self.resource_gathering_timer > 0:
 				self.resource_gathering_timer -= 1
 				print("Iron timer:", self.resource_gathering_timer)
@@ -179,6 +174,48 @@ class NPC:
 
 				self.previous_state = "Taking resource to storage"
 				self.current_state = "Moving along path"
+		
+		if self.current_state == "Building kiln": # Kiln building
+			if not grid[self.row][self.col].materials_here:
+				grid[self.row][self.col].materials_here = {
+					"Wood": 1
+				}
+				print("Laying down wood to get some more")
+				path_list = astar(grid, grid[self.row][self.col], interest_Spots_dict["Storage"])
+				for spot in path_list[::-1]:
+					self.path_queue.put(spot)
+				
+				self.previous_state = "Getting wood"
+				self.current_state = "Moving along path"
+				self.task_queue.put(["Building kiln", grid[self.row][self.col]])
+
+			
+			elif grid[self.row][self.col].materials_here["Wood"] >= 2:
+				interest_Spots_dict["Kiln"].append(grid[self.row][self.col])
+				grid[self.row][self.col].type = "Building"
+				print("Finally built kiln")
+				self.change_state("")
+			
+			else:
+				grid[self.row][self.col].materials_here["Wood"] += 1
+				print("might need to get more wood")
+
+
+			
+
+		if self.current_state == "Getting wood": # Getting wood from storage
+			if(storage_dict["Wood"] <= 0):
+				print("No wood in storage")
+				self.change_state("")
+			else:
+				self.inventory = "Wood"
+				current_task = self.task_queue.get()
+				self.previous_state = current_task[0]
+				path_list = astar(grid, grid[self.row][self.col], current_task[1])
+				for spot in path_list[::-1]:
+					self.path_queue.put(spot)
+				self.current_state = "Moving along path"
+				
 		
 		if self.current_state == "Taking resource to storage":
 			storage_dict[self.inventory] += 1
@@ -205,6 +242,7 @@ class Spot:
 		self.total_rows = total_rows
 		self.type = type
 		self.trees_left = trees_left
+		self.materials_here = None
 
 	def get_pos(self):
 		return self.row, self.col
@@ -468,18 +506,17 @@ def explore_wide(npc, grid):
 			discovered_Spots.append(explore_spots(grid, npc))
 		draw() """
 
-		discovered_surrounding_Spots = explore_spots(grid, npc, npc.resource_pos_dict)
-		for spot in discovered_surrounding_Spots:
-			if spot not in npc.discovered_Spots:
-				npc.discovered_Spots.append(spot)
+		explore_spots(grid, npc, npc.resource_pos_dict)
 
-		if current not in npc.discovered_Spots:
-			npc.discovered_Spots.append(current)
+		if not current in npc.discovered_Spots:
+			npc.discovered_Spots.setdefault(current, 1)
 
 		for neighbor in current.neighbors:
 			if neighbor not in npc.previous_Spots:
 				npc.open_queue.put(neighbor)
 				npc.previous_Spots.append(neighbor)
+			if not neighbor in npc.discovered_Spots:
+				npc.discovered_Spots.setdefault(neighbor, 1)
 
 		
 
@@ -596,7 +633,7 @@ def load_map(grid, mapnum):
 	startX = 0
 	startY = 0
 
-	already_discovered_Spots = []
+	already_discovered_Spots = {}
 
 	ironprobability = 60
 	start = None
@@ -611,7 +648,7 @@ def load_map(grid, mapnum):
 			if char == "S": # Starting area
 				grid[startY][startX].type = "Ground"
 				grid[startY][startX].color = BROWN
-				already_discovered_Spots.append(grid[startY][startX])
+				already_discovered_Spots.setdefault(grid[startY][startX], 1)
 			
 			if char == "H":
 				grid[startY][startX].type = "Building"
@@ -718,11 +755,13 @@ def go_to_school(npc, school_Spot, grid, education_type):
 
 
 def gather_resource(resource_type, interest_spots_dict, npc_List, grid):
-	first_best_npc = NPC
+	first_best_npc = None
 	for npc in npc_List:
 		if npc.job == "Worker":
-			first_best_npc = npc
-
+			if npc.current_state == "":
+				first_best_npc = npc
+	if (first_best_npc == None):
+		print("No available workers to gather", resource_type)
 
 	closest_resource_Spot = interest_spots_dict[resource_type][0]
 	for spot in interest_spots_dict[resource_type]:
@@ -778,9 +817,15 @@ def gather_resource(resource_type, interest_spots_dict, npc_List, grid):
 
 
 
-def build_building(building_type, resource_storage_dict, interest_Spots_dict, discovered_Spots, grid, npc, draw):
+def build_building(building_type, resource_storage_dict, interest_Spots_dict, discovered_Spots, grid, npc_List):
+	first_available_npc = None
+	for npc in npc_List:
+		if npc.current_state == "":
+			first_available_npc = npc
+			break
+	
 	if(building_type == "Kiln"): # Kiln
-		if resource_storage_dict["Wood"] >= 2:
+		if resource_storage_dict["Wood"] >= 1:
 			print("starting to build kiln")
 			build_Spot = None
 			for spot in discovered_Spots:
@@ -788,12 +833,21 @@ def build_building(building_type, resource_storage_dict, interest_Spots_dict, di
 					build_Spot = spot
 					break
 			
-			interest_Spots_dict["Kiln"].append(build_Spot)
-			find_walk_path(grid, draw, npc, build_Spot)
-			grid[build_Spot.row][build_Spot.col].type = "Building"
+			
+			##find_walk_path(grid, draw, npc, build_Spot)
+			npc.task_queue.put(["Building kiln", build_Spot])
+
+			path_list = astar(grid, grid[first_available_npc.row][first_available_npc.col], interest_Spots_dict["Storage"])
+			for spot in path_list[::-1]:
+				first_available_npc.path_queue.put(spot)
+			
+			first_available_npc.previous_state = "Getting wood"
+			first_available_npc.current_state = "Moving along path"
+			
+			""" grid[build_Spot.row][build_Spot.col].type = "Building"
 			resource_storage_dict["Wood"] -= 2
 			time.sleep(2)
-			print("Kiln as been built at Row:", build_Spot.row, "Col: ", build_Spot.col)
+			print("Kiln as been built at Row:", build_Spot.row, "Col: ", build_Spot.col) """
 		else:
 			print("not enough wood to build kiln")
 
@@ -809,7 +863,7 @@ def build_building(building_type, resource_storage_dict, interest_Spots_dict, di
 					break
 			
 			interest_Spots_dict["Smithy"].append(build_Spot)
-			find_walk_path(grid, draw, npc, build_Spot)
+			#find_walk_path(grid, draw, npc, build_Spot)
 			grid[build_Spot.row][build_Spot.col].type = "Building"
 			resource_storage_dict["Wood"] -= 2
 			time.sleep(2)
@@ -829,7 +883,7 @@ def build_building(building_type, resource_storage_dict, interest_Spots_dict, di
 					break
 			
 			interest_Spots_dict["Forge"].append(build_Spot)
-			find_walk_path(grid, draw, npc, build_Spot)
+			#find_walk_path(grid, draw, npc, build_Spot)
 			grid[build_Spot.row][build_Spot.col].type = "Building"
 			resource_storage_dict["Wood"] -= 2
 			time.sleep(2)
@@ -847,7 +901,7 @@ def build_building(building_type, resource_storage_dict, interest_Spots_dict, di
 					break
 			
 			interest_Spots_dict["Training Camp"].append(build_Spot)
-			find_walk_path(grid, draw, npc, build_Spot)
+			#find_walk_path(grid, draw, npc, build_Spot)
 			grid[build_Spot.row][build_Spot.col].type = "Building"
 			resource_storage_dict["Wood"] -= 2
 			time.sleep(2)
@@ -857,7 +911,6 @@ def build_building(building_type, resource_storage_dict, interest_Spots_dict, di
 
 
 def explore_spots(grid, npc, resource_pos_dict):
-	discovered_Spots = []
 	if grid[npc.row + 1][npc.col].is_resource()[0]:
 		resource_type = grid[npc.row + 1][npc.col].is_resource()[1]
 		if grid[npc.row + 1][npc.col] not in resource_pos_dict[resource_type]:
@@ -908,7 +961,7 @@ def explore_spots(grid, npc, resource_pos_dict):
 			print(resource_type)
 			resource_pos_dict[resource_type].append(grid[npc.row + 1][npc.col - 1])
 
-	discovered_Spots.append(grid[npc.row + 1][npc.col])
+	""" discovered_Spots.append(grid[npc.row + 1][npc.col])
 	discovered_Spots.append(grid[npc.row - 1][npc.col])
 	discovered_Spots.append(grid[npc.row][npc.col + 1])
 	discovered_Spots.append(grid[npc.row][npc.col - 1])
@@ -916,7 +969,12 @@ def explore_spots(grid, npc, resource_pos_dict):
 	discovered_Spots.append(grid[npc.row + 1][npc.col + 1])
 	discovered_Spots.append(grid[npc.row - 1][npc.col + 1])
 	discovered_Spots.append(grid[npc.row - 1][npc.col - 1])
-	discovered_Spots.append(grid[npc.row + 1][npc.col - 1])
+	discovered_Spots.append(grid[npc.row + 1][npc.col - 1]) """
+
+	for neighbor in grid[npc.row][npc.col].neighbors:
+		if not neighbor in npc.discovered_Spots:
+			npc.discovered_Spots.setdefault(neighbor, 1)
+
 
 	if not grid[npc.row + 1][npc.col].color == YELLOW:
 		reset_Spot(grid[npc.row + 1][npc.col]) # check right
@@ -941,25 +999,27 @@ def explore_spots(grid, npc, resource_pos_dict):
 	
 	if not grid[npc.row + 1][npc.col - 1] == YELLOW:
 		reset_Spot(grid[npc.row + 1][npc.col - 1]) # check up right
-	return discovered_Spots
+
+	return
 
 
+def update_dicts(main_interest_Spots_dict, npc, main_discovered_Spots):
+	for key in npc.resource_pos_dict.keys():
+		if len(npc.resource_pos_dict[key]) > len(main_interest_Spots_dict[key]): # efficiency
+			for val in npc.resource_pos_dict[key]:
+				if val not in main_interest_Spots_dict[key]:
+					main_interest_Spots_dict[key].append(val)
+		else:
+			break
+	for key in npc.discovered_Spots.keys():
+		if len(npc.discovered_Spots.keys()) > len(main_discovered_Spots.keys()):
+			if key not in main_discovered_Spots:
+				main_discovered_Spots.setdefault(key, 1)
+		else:
+			break
 
-def find_walk_path(grid, draw, npc, end_Spot):
-	npcPosition = grid[npc.row][npc.col]
-	path_list = astar(lambda: draw, grid, npcPosition, end_Spot)
-	for spot in path_list[::-1]:
-		npc.go_to_Spot_instantly(grid, spot)
-		draw()
 
-
-def update_dicts(main_interest_Spots_dict, npcList):
-	for npc in npcList:
-		for key in npc.resource_pos_dict.keys():
-			if len(npc.resource_pos_dict[key]) > len(main_interest_Spots_dict[key]): # efficiency
-				for val in npc.resource_pos_dict[key]:
-					if val not in main_interest_Spots_dict[key]:
-						main_interest_Spots_dict[key].append(val)
+		
 
 
 def main(win, width):
@@ -968,7 +1028,7 @@ def main(win, width):
 	make_grid(ROWS, width, grid)
 	start = Spot
 	end = Spot
-	discovered_Spots = []
+	discovered_Spots = {}
 	start, end, discovered_Spots = load_map(grid, 4)
 	oblivionNPCs = [NPC(24,24,width, "Steffe")]
 	oblivionNPCs.append(NPC(22,22,width, "Sven"))
@@ -1063,10 +1123,10 @@ def main(win, width):
 					gather_resource("Tree", interest_spots_dict, oblivionNPCs, grid)
 
 				elif event.key == pygame.K_i: # Find and mine iron
-					gather_resource("Iron", interest_spots_dict, oblivionNPCs[0], grid, resource_storage_dict, lambda: draw(win, grid, ROWS, width))
+					gather_resource("Iron", interest_spots_dict, oblivionNPCs, grid)
 
 				elif event.key == pygame.K_k: # Build charcoal kiln
-					build_building("Kiln", resource_storage_dict, interest_spots_dict, discovered_Spots, grid, oblivionNPCs[0], lambda: draw(win, grid, ROWS, width))
+					build_building("Kiln", resource_storage_dict, interest_spots_dict, discovered_Spots, grid, oblivionNPCs)
 
 				elif event.key == pygame.K_l: # Produce charcoal
 					if not interest_spots_dict["Kiln"]:
@@ -1108,14 +1168,14 @@ def main(win, width):
 							npc.update(grid, interest_spots_dict, resource_storage_dict)
 							draw(win, grid, ROWS, width, oblivionNPCs)
 							if npc.job == "Explorer":
-								update_dicts(interest_spots_dict, oblivionNPCs)
+								update_dicts(interest_spots_dict, npc, discovered_Spots)
 				
 				elif event.key == pygame.K_u: # singlestepping update
 					for npc in oblivionNPCs:
 						npc.update(grid, interest_spots_dict, resource_storage_dict)
 						draw(win, grid, ROWS, width, oblivionNPCs)
 						if npc.job == "Explorer":
-							update_dicts(interest_spots_dict, oblivionNPCs)
+							update_dicts(interest_spots_dict, npc, discovered_Spots)
 					update +=1
 					#print("Update:", update)
 
@@ -1123,6 +1183,9 @@ def main(win, width):
 
 				elif event.key == pygame.K_s: # Go to school
 					go_to_school(oblivionNPCs[0], interest_spots_dict["School"], grid, "Explorer")
+
+				elif event.key == pygame.K_a:
+					go_to_school(oblivionNPCs[1], interest_spots_dict["School"], grid, "Builder")
 
 
 				elif event.key == pygame.K_d and start and end: # Explore Deep
