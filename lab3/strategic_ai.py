@@ -1250,7 +1250,7 @@ def main(win, width):
 				elif event.key == pygame.K_k: # Build charcoal kiln
 					build_building("Kiln", resource_storage_dict, interest_spots_dict, discovered_Spots, grid, oblivionNPCs)
 				
-				elif event.key == pygame.K_f: # Build building
+				elif event.key == pygame.K_f: # Build building test
 					build_building("Smithy", resource_storage_dict, interest_spots_dict, discovered_Spots, grid, oblivionNPCs)
 
 				elif event.key == pygame.K_l: # Produce charcoal
