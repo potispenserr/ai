@@ -52,6 +52,7 @@ class NPC:
 		self.previous_Spots = []
 		self.schooling_left = 20
 		self.resource_gathering_timer = 10
+		self.crafting_timer = 0
 		self.inventory = ""
 		self.build_timer = 0
 
@@ -84,7 +85,7 @@ class NPC:
 	
 	def update(self, grid, interest_Spots_dict, storage_dict):
 
-		if self.current_state == "Exploring":
+		if self.current_state == "Exploring": # Exploring
 			explore_wide(self, grid)
 			if(manhattan_distance(self.get_pos(), self.next_Spot.get_pos()) < 2):
 				self.go_to_Spot_instantly(grid, self.next_Spot)
@@ -133,6 +134,8 @@ class NPC:
 			else:
 				self.schooling_left -= 1
 				print(self.name, "has", self.schooling_left, "study time left")
+
+
 		
 		elif self.current_state == "Cutting down a tree": # Tree cutting
 			if self.resource_gathering_timer > 0:
@@ -159,6 +162,8 @@ class NPC:
 				self.previous_state = "Taking resource to storage"
 				self.current_state = "Moving along path"
 
+
+
 		elif self.current_state == "Mining iron": # Iron mining
 			if self.resource_gathering_timer > 0:
 				self.resource_gathering_timer -= 1
@@ -181,6 +186,58 @@ class NPC:
 
 				self.previous_state = "Taking resource to storage"
 				self.current_state = "Moving along path"
+
+
+		elif self.current_state == "Producing charcoal": # Produce charcoal
+			if grid[self.row][self.col].materials_here["Wood"] == 0: # When worker first arrives at the charcoal kiln
+				grid[self.row][self.col].materials_here = {
+					"Wood": 1
+				}
+				print("Laying down wood to get some more for the kiln")
+				self.inventory = ""
+				path_list = astar(grid, grid[self.row][self.col], interest_Spots_dict["Storage"])
+				for spot in path_list[::-1]:
+					self.path_queue.put(spot)
+				
+				self.previous_state = "Getting wood"
+				self.current_state = "Moving along path"
+				self.task_queue.put(["Producing charcoal", grid[self.row][self.col]])
+				self.crafting_timer = 10
+
+			
+			elif grid[self.row][self.col].materials_here["Wood"] >= 2: # When kiln has the required amount of wood
+				if self.crafting_timer <= 0:
+					print("The charcoal is now done")
+					self.inventory = "Charcoal"
+					for key in grid[self.row][self.col].materials_here:
+						grid[self.row][self.col].materials_here[key] = 0
+
+					path_list = astar(grid, grid[self.row][self.col], interest_Spots_dict["Storage"])
+					for spot in path_list[::-1]:
+						self.path_queue.put(spot)
+
+					self.previous_state = "Taking resource to storage"
+					self.current_state = "Moving along path"
+
+				else:
+					print("Charcoal timer", self.crafting_timer)
+					self.crafting_timer -= 1
+
+			
+			else: # When the worker has to get more wood
+				grid[self.row][self.col].materials_here["Wood"] += 1
+				self.inventory = ""
+				if grid[self.row][self.col].materials_here["Wood"] >= 2:
+					return
+
+				self.previous_state = "Getting wood"
+				self.current_state = "Moving along path"
+				path_list = astar(grid, grid[self.row][self.col], interest_Spots_dict["Storage"])
+				for spot in path_list[::-1]:
+					self.path_queue.put(spot)
+
+				self.task_queue.put(["Producing charcoal", grid[self.row][self.col]])
+				print("might need to get more wood for the kiln")
 		
 		elif self.current_state == "Building kiln": # Kiln building
 			self.build_tier_1_building(grid, interest_Spots_dict, self.current_state, "Kiln")
@@ -214,6 +271,8 @@ class NPC:
 						interest_Spots_dict["Smithy"].append(grid[self.row][self.col])
 						grid[self.row][self.col].type = "Building"
 						print("Finally built smithy")
+						for key in grid[self.row][self.col].materials_here:
+							grid[self.row][self.col].materials_here[key] = 0
 						self.change_state("")
 					else:
 						print("smithy build timer", self.build_timer)
@@ -267,7 +326,7 @@ class NPC:
 				self.current_state = "Moving along path"
 				
 		
-		elif self.current_state == "Taking resource to storage":
+		elif self.current_state == "Taking resource to storage": # Taking resource to storage
 			storage_dict[self.inventory] += 1
 			self.inventory = ""
 			self.change_state("")
@@ -290,7 +349,7 @@ class NPC:
 				self.previous_state = "Getting wood"
 				self.current_state = "Moving along path"
 				self.task_queue.put([building_state_string, grid[self.row][self.col]])
-				self.build_timer = 20
+				self.build_timer = 10
 
 			
 			elif grid[self.row][self.col].materials_here["Wood"] >= 2:
@@ -298,6 +357,8 @@ class NPC:
 					interest_Spots_dict[building_type].append(grid[self.row][self.col])
 					grid[self.row][self.col].type = "Building"
 					print("Finally built", building_type)
+					for key in grid[self.row][self.col].materials_here:
+						grid[self.row][self.col].materials_here[key] = 0
 					self.change_state("")
 				else:
 					print(building_type, " build timer", self.build_timer)
@@ -314,6 +375,48 @@ class NPC:
 				self.current_state = "Moving along path"
 				self.task_queue.put([building_state_string, grid[self.row][self.col]])
 				print("might need to get more wood")
+
+	def produce_tier_2_items(self, grid, interest_Spots_dict, building_state_string, building_type):
+		#WORK IN PROGRESS
+		if not grid[self.row][self.col].materials_here: # When worker first arrives at the build spot
+			grid[self.row][self.col].materials_here = {
+				"Wood": 1
+			}
+			print("Laying down wood to get some more")
+			self.inventory = ""
+			path_list = astar(grid, grid[self.row][self.col], interest_Spots_dict["Storage"])
+			for spot in path_list[::-1]:
+				self.path_queue.put(spot)
+			
+			self.previous_state = "Getting wood"
+			self.current_state = "Moving along path"
+			self.task_queue.put([building_state_string, grid[self.row][self.col]])
+			self.build_timer = 10
+
+		
+		elif grid[self.row][self.col].materials_here["Wood"] >= 2:
+			if self.build_timer <= 0:
+				interest_Spots_dict[building_type].append(grid[self.row][self.col])
+				grid[self.row][self.col].type = "Building"
+				print("Finally built", building_type)
+				for key in grid[self.row][self.col].materials_here:
+					grid[self.row][self.col].materials_here[key] = 0
+				self.change_state("")
+			else:
+				print(building_type, " build timer", self.build_timer)
+				self.build_timer -= 1
+
+		
+		else:
+			grid[self.row][self.col].materials_here["Wood"] += 1
+			self.inventory = ""
+			if grid[self.row][self.col].materials_here["Wood"] >= 2:
+				return
+
+			self.previous_state = "Getting wood"
+			self.current_state = "Moving along path"
+			self.task_queue.put([building_state_string, grid[self.row][self.col]])
+			print("might need to get more wood")
 
 
 
@@ -654,7 +757,6 @@ def draw(win, grid, rows, width, npclist = None):
 	if(npclist != None):
 		for npc in npclist:
 			grid[npc.row][npc.col].color = npc.color
-			pass
 
 	pygame.display.update()
 	#time.sleep(0.3)
@@ -790,6 +892,37 @@ def go_to_school(npc, school_Spot, grid, education_type):
 	npc.previous_state = "Going to school"
 	npc.current_state = "Moving along path"
 	npc.change_job(education_type)
+
+
+def craft_item(item_type, resource_storage_dict, interest_Spots_dict, grid, npc_List):
+	if item_type == "Charcoal":
+		if not interest_Spots_dict["Kiln"]:
+			print("No charcoal kiln has been built")
+			return
+		elif resource_storage_dict["Wood"] < 2:
+			print("There's not enough wood to make charcoal")
+			return
+
+		first_available_npc = None
+		for npc in npc_List:
+			if npc.job == "Worker":
+				if npc.current_state == "":
+					first_available_npc = npc
+		print("going to charcoal kiln")
+		closest_kiln = interest_Spots_dict["Kiln"][0]
+		for spot in interest_Spots_dict["Kiln"]:
+				if(h(first_available_npc.get_pos(), spot.get_pos()) < h(first_available_npc.get_pos(), closest_kiln.get_pos())):
+					closest_kiln = spot
+
+		first_available_npc.task_queue.put(["Producing charcoal", closest_kiln])
+
+		path_list = astar(grid, grid[first_available_npc.row][first_available_npc.col], interest_Spots_dict["Storage"])
+		for spot in path_list[::-1]:
+			first_available_npc.path_queue.put(spot)
+
+		first_available_npc.previous_state = "Getting wood"
+		first_available_npc.current_state = "Moving along path"
+		
 
 
 
@@ -1045,23 +1178,7 @@ def main(win, width):
 					build_building("training camp", resource_storage_dict, interest_spots_dict, discovered_Spots, grid, oblivionNPCs)
 
 				elif event.key == pygame.K_l: # Produce charcoal
-					if not interest_spots_dict["Kiln"]:
-						print("No charcoal kiln has been built")
-					elif resource_storage_dict["Wood"] < 1:
-						print("There's not enough wood to make charcoal")
-
-					else:
-						print("going to charcoal kiln")
-						closest_kiln = interest_spots_dict["Kiln"][0]
-						for spot in interest_spots_dict["Kiln"]:
-								if(h(oblivionNPCs[0].get_pos(), spot.get_pos()) < h(oblivionNPCs[0].get_pos(), closest_kiln.get_pos())):
-									closest_kiln = spot
-						find_walk_path(grid, lambda: draw(win, grid, ROWS, width), oblivionNPCs[0], closest_kiln)
-						print("Putting wood in the kiln")
-						time.sleep(3)
-						print("The charcoal is now done roasting")
-						resource_storage_dict["Wood"] -= 1
-						resource_storage_dict["Charcoals"] += 1
+					craft_item("Charcoal", resource_storage_dict, interest_spots_dict, grid, oblivionNPCs)
 					
 					
 
