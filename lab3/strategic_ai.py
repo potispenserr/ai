@@ -183,15 +183,15 @@ class NPC:
 				self.current_state = "Moving along path"
 		
 		elif self.current_state == "Building kiln": # Kiln building
-			self.build_tier_1_building(grid, interest_Spots_dict, storage_dict, self.current_state, "Kiln")
+			self.build_tier_1_building(grid, interest_Spots_dict, self.current_state, "Kiln")
 
 		elif self.current_state == "Building forge": # Build forge
-			self.build_tier_1_building(grid, interest_Spots_dict, storage_dict, self.current_state, "Forge")
+			self.build_tier_1_building(grid, interest_Spots_dict, self.current_state, "Forge")
 		
 		elif self.current_state == "Building training camp": # Build training camp
-			self.build_tier_1_building(grid, interest_Spots_dict, storage_dict, self.current_state, "Training camp")
+			self.build_tier_1_building(grid, interest_Spots_dict, self.current_state, "Training camp")
 	
-		elif self.current_state == "Building smithy": # Build smithy
+		elif self.current_state == "Building smithy": # Build smithy aka the only "tier 2" building
 			if not grid[self.row][self.col].materials_here:
 				grid[self.row][self.col].materials_here = {
 					"Wood": 1,
@@ -276,8 +276,8 @@ class NPC:
 			print(self.name, "has a unimplemented state", self.current_state)
 
 
-	def build_tier_1_building(self, grid, interest_Spots_dict, storage_dict, building_state_string, building_type):
-			if not grid[self.row][self.col].materials_here:
+	def build_tier_1_building(self, grid, interest_Spots_dict, building_state_string, building_type):
+			if not grid[self.row][self.col].materials_here: # When worker first arrives at the build spot
 				grid[self.row][self.col].materials_here = {
 					"Wood": 1
 				}
@@ -307,6 +307,12 @@ class NPC:
 			else:
 				grid[self.row][self.col].materials_here["Wood"] += 1
 				self.inventory = ""
+				if grid[self.row][self.col].materials_here["Wood"] >= 2:
+					return
+
+				self.previous_state = "Getting wood"
+				self.current_state = "Moving along path"
+				self.task_queue.put([building_state_string, grid[self.row][self.col]])
 				print("might need to get more wood")
 
 
