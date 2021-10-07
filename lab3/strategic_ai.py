@@ -26,7 +26,127 @@ ACID_GREEN = (176, 191, 26)
 BROWN = (179, 89, 0)
 IRON_GREY = (60, 60, 60)
 
+class Spot:
+	def __init__(self, row, col, width, total_rows, type, trees_left = None):
+		self.row = row
+		self.col = col
+		self.x = row * width
+		self.y = col * width
+		self.color = WHITE
+		self.neighbors = []
+		self.width = width
+		self.total_rows = total_rows
+		self.type = type
+		self.trees_left = trees_left
+		self.materials_here = None
 
+	def get_pos(self):
+		return self.row, self.col
+
+	def is_closed(self):
+		return self.color == RED
+
+	def is_open(self):
+		return self.color == GREEN
+
+	def is_barrier(self):
+		return self.type == "Wall" or self.type == "Mountain" or self.type == "Water"
+
+	def is_resource(self):
+		if self.type == "Tree":
+			return True, self.type
+		
+		elif self.type == "Iron":
+			return True, self.type
+
+		else:
+			return False, self.type
+
+	def is_start(self):
+		return self.color == ORANGE
+
+	def is_end(self):
+		return self.color == TURQUOISE
+
+	def reset(self):
+		self.color = WHITE
+
+	def add_trees(self, trees):
+		self.trees_left = trees
+
+	def make_start(self):
+		self.color = ORANGE
+
+	def make_closed(self):
+		self.color = RED
+
+	def make_open(self):
+		self.color = GREEN
+
+	def make_barrier(self):
+		self.color = BLACK
+
+	def make_end(self):
+		self.color = TURQUOISE
+
+	def make_path(self):
+		self.color = PURPLE
+	
+	def make_tree(self):
+		self.color = DARK_GREEN
+
+	def make_water(self):
+		self.color = LIGHT_BLUE
+	
+	def make_swamp(self):
+		self.color = ACID_GREEN
+	
+	def make_ground(self):
+		self.color = BROWN
+	
+	def make_mountain(self):
+		self.color = BLACK
+
+	def draw(self, win): # draws the spot on the pygame window
+		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.width))
+
+	# adds walkable neighbors diagonally, up, down, left and right
+	# if a wall is next to a diagonal neighbor, the neighbor doesn't get added
+	def update_neighbors(self, grid):
+		self.neighbors = []
+
+		if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col].is_barrier(): # right
+			self.neighbors.append(grid[self.row + 1][self.col])
+
+
+		if self.row > 0 and not grid[self.row - 1][self.col].is_barrier(): # left
+			self.neighbors.append(grid[self.row - 1][self.col])
+
+
+	
+		if self.col < self.total_rows - 1 and not grid[self.row][self.col + 1].is_barrier(): # down
+			self.neighbors.append(grid[self.row][self.col + 1])
+
+			if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col + 1].is_barrier() and not grid[self.row + 1][self.col].is_barrier(): # checks if down right is a wall and right is a wall
+				self.neighbors.append(grid[self.row + 1][self.col + 1])
+
+			if self.row > 0 and not grid[self.row - 1][self.col + 1].is_barrier() and not grid[self.row - 1][self.col].is_barrier(): # checks if down left is a wall and if left is a wall
+				self.neighbors.append(grid[self.row - 1][self.col + 1])
+
+					
+
+		if self.col > 0 and not grid[self.row][self.col - 1].is_barrier(): # up
+			self.neighbors.append(grid[self.row][self.col - 1])
+
+			if self.row > 0 and not grid[self.row - 1][self.col - 1].is_barrier() and not grid[self.row - 1][self.col].is_barrier(): # checks if up left is a wall and if left is a wall
+				self.neighbors.append(grid[self.row - 1][self.col - 1])
+			
+			if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col - 1].is_barrier() and not grid[self.row + 1][self.col].is_barrier(): # checks if up right is a wall and if right is a wall
+				self.neighbors.append(grid[self.row + 1][self.col - 1])
+				
+
+	def __lt__(self, other):
+		return False
 
 
 class NPC:
@@ -55,6 +175,8 @@ class NPC:
 		self.crafting_timer = 0
 		self.inventory = ""
 		self.build_timer = 0
+		self.standing_on_swamp = False
+		self.TESTWALKEDSPOTS = 0
 
 
 	def draw(self, win):
@@ -65,7 +187,9 @@ class NPC:
 
 		self.row = spot.row
 		self.col = spot.col
-		time.sleep(0.07)
+		#time.sleep(0.1)
+		
+	
 
 		grid[self.row][self.col].color = YELLOW
 
@@ -83,13 +207,21 @@ class NPC:
 		self.previous_state = self.current_state
 		self.current_state = new_state
 	
-	def update(self, grid, interest_Spots_dict, storage_dict):
+	def update(self, grid: list, interest_Spots_dict, storage_dict):
 
 		if self.current_state == "Exploring": # Exploring
+			if self.standing_on_swamp == True:
+				print("Ugh i'm stuck in the swamp")
+				self.standing_on_swamp = False
+				return
+			
 			explore_wide(self, grid)
-			if(manhattan_distance(self.get_pos(), self.next_Spot.get_pos()) < 2):
+			if(h(self.get_pos(), self.next_Spot.get_pos()) < 1):
+				print("Distance to next spot is", h(self.get_pos(), self.next_Spot.get_pos()))
 				self.go_to_Spot_instantly(grid, self.next_Spot)
 				self.previous_Spots.append(self.next_Spot)
+				if grid[self.row][self.col].type == "Swamp":
+					self.standing_on_swamp = True
 
 			else:
 				self.pathfind_to(grid, self.next_Spot)
@@ -99,12 +231,24 @@ class NPC:
 				self.previous_Spots.append(self.next_Spot)
 				self.previous_state = "Exploring"
 				self.current_state = "Moving along path"
+				if grid[self.row][self.col].type == "Swamp":
+					self.standing_on_swamp = True
 				return
+
+		elif self.current_state == "Slowed down by swamp":
+			print("shieett")
+
 		
 		elif self.current_state == "Moving along path": #Move along path
+			if self.standing_on_swamp == True:
+				self.standing_on_swamp = False
+				return
+			
 			if not self.path_queue.empty():
 				self.next_Spot = self.path_queue.get()
-				explore_spots(grid, self, self.resource_pos_dict)
+				if self.job == "Explorer":
+					explore_spots(grid, self, self.resource_pos_dict)
+				
 				self.go_to_Spot_instantly(grid, self.next_Spot)
 				self.previous_Spots.append(self.next_Spot)
 			else:
@@ -339,7 +483,7 @@ class NPC:
 			print(self.name, "has a unimplemented state", self.current_state)
 
 
-	def build_tier_1_building(self, grid, interest_Spots_dict, building_state_string, building_type):
+	def build_tier_1_building(self, grid, interest_Spots_dict, building_state_string, building_type): # Build tier one building
 			if not grid[self.row][self.col].materials_here: # When worker first arrives at the build spot
 				grid[self.row][self.col].materials_here = {
 					"Wood": 1
@@ -479,133 +623,13 @@ class NPC:
 			print("might need to get more wood")
 	
 	def pathfind_to(self, grid, destination_Spot):
-		path_list = astar(grid, grid[self.row][self.col], destination_Spot)
+		path_list = astar(grid, grid[self.row][self.col], destination_Spot, self)
 		for spot in path_list[::-1]:
 			self.path_queue.put(spot)
 
 
 
-class Spot:
-	def __init__(self, row, col, width, total_rows, type, trees_left = None):
-		self.row = row
-		self.col = col
-		self.x = row * width
-		self.y = col * width
-		self.color = WHITE
-		self.neighbors = []
-		self.width = width
-		self.total_rows = total_rows
-		self.type = type
-		self.trees_left = trees_left
-		self.materials_here = None
 
-	def get_pos(self):
-		return self.row, self.col
-
-	def is_closed(self):
-		return self.color == RED
-
-	def is_open(self):
-		return self.color == GREEN
-
-	def is_barrier(self):
-		return self.type == "Wall" or self.type == "Mountain" or self.type == "Water"
-
-	def is_resource(self):
-		if self.type == "Tree":
-			return True, self.type
-		
-		elif self.type == "Iron":
-			return True, self.type
-
-		else:
-			return False, self.type
-
-	def is_start(self):
-		return self.color == ORANGE
-
-	def is_end(self):
-		return self.color == TURQUOISE
-
-	def reset(self):
-		self.color = WHITE
-
-	def add_trees(self, trees):
-		self.trees_left = trees
-
-	def make_start(self):
-		self.color = ORANGE
-
-	def make_closed(self):
-		self.color = RED
-
-	def make_open(self):
-		self.color = GREEN
-
-	def make_barrier(self):
-		self.color = BLACK
-
-	def make_end(self):
-		self.color = TURQUOISE
-
-	def make_path(self):
-		self.color = PURPLE
-	
-	def make_tree(self):
-		self.color = DARK_GREEN
-
-	def make_water(self):
-		self.color = LIGHT_BLUE
-	
-	def make_swamp(self):
-		self.color = ACID_GREEN
-	
-	def make_ground(self):
-		self.color = BROWN
-	
-	def make_mountain(self):
-		self.color = BLACK
-
-	def draw(self, win): # draws the spot on the pygame window
-		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.width))
-
-	# adds walkable neighbors diagonally, up, down, left and right
-	# if a wall is next to a diagonal neighbor, the neighbor doesn't get added
-	def update_neighbors(self, grid):
-		self.neighbors = []
-
-		if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col].is_barrier(): # right
-			self.neighbors.append(grid[self.row + 1][self.col])
-
-
-		if self.row > 0 and not grid[self.row - 1][self.col].is_barrier(): # left
-			self.neighbors.append(grid[self.row - 1][self.col])
-
-
-	
-		if self.col < self.total_rows - 1 and not grid[self.row][self.col + 1].is_barrier(): # down
-			self.neighbors.append(grid[self.row][self.col + 1])
-
-			if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col + 1].is_barrier() and not grid[self.row + 1][self.col].is_barrier(): # checks if down right is a wall and right is a wall
-				self.neighbors.append(grid[self.row + 1][self.col + 1])
-
-			if self.row > 0 and not grid[self.row - 1][self.col + 1].is_barrier() and not grid[self.row - 1][self.col].is_barrier(): # checks if down left is a wall and if left is a wall
-				self.neighbors.append(grid[self.row - 1][self.col + 1])
-
-					
-
-		if self.col > 0 and not grid[self.row][self.col - 1].is_barrier(): # up
-			self.neighbors.append(grid[self.row][self.col - 1])
-
-			if self.row > 0 and not grid[self.row - 1][self.col - 1].is_barrier() and not grid[self.row - 1][self.col].is_barrier(): # checks if up left is a wall and if left is a wall
-				self.neighbors.append(grid[self.row - 1][self.col - 1])
-			
-			if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col - 1].is_barrier() and not grid[self.row + 1][self.col].is_barrier(): # checks if up right is a wall and if right is a wall
-				self.neighbors.append(grid[self.row + 1][self.col - 1])
-				
-
-	def __lt__(self, other):
-		return False
 
 
 
@@ -631,12 +655,12 @@ def manhattan_distance(p1, p2):
 	return abs(x1 - x2) + abs(y1 - y2)
 
 
-def reconstruct_path(came_from, current, draw):	
+def reconstruct_path(came_from, current: Spot, npc: NPC):	
 	list_to_path = []
 	while current in came_from:
 		list_to_path.append(current)
 		current = came_from[current]
-		if current.color == YELLOW: # stop at npc
+		if current.get_pos() == npc.get_pos(): # stop at npc
 			return list_to_path
 		#current.make_path()
 		#draw()
@@ -645,7 +669,7 @@ def reconstruct_path(came_from, current, draw):
 
 
 
-def astar(grid, start, end): 
+def astar(grid, start, end, npc): 
 	open_pq = queue.PriorityQueue()
 	open_pq.put((0, start))
 	came_from = {}
@@ -663,7 +687,7 @@ def astar(grid, start, end):
 		current = open_pq.get()[1]
 
 		if current == end:
-			list_to_path = reconstruct_path(came_from, end, draw)
+			list_to_path = reconstruct_path(came_from, end, npc)
 			return list_to_path
 
 		for neighbor in current.neighbors:
@@ -948,40 +972,40 @@ def reset_map(grid):
 		for spot in row:
 			reset_Spot(spot)
 
-def go_to_school(npc, grid, education_type, school_Spot = None, interest_Spots_dict = None, storage_dict = None):
+def go_to_school(npc, grid, education_type, school_Spot = None, interest_Spots_list = None, storage_dict = None):
 	if education_type == "Soldier":
-		if not interest_Spots_dict["Training camp"]:
+		if not interest_Spots_list:
 			print("No training camp has been built")
 			return
 		if storage_dict["Sword"] <= 0:
 			print("There is no swords in storage")
 			return
 		npcSpot = grid[npc.row][npc.col]
-		closest_training_camp_Spot = interest_Spots_dict["Training camp"][0]
-		for spot in interest_Spots_dict["Training camp"]:
+		closest_training_camp_Spot = interest_Spots_list[0]
+		for spot in interest_Spots_list:
 				if(h(npc.get_pos(), spot.get_pos()) < h(npc.get_pos(), closest_training_camp_Spot.get_pos())):
 					closest_training_camp_Spot = spot
 
-		path_list = astar(grid, npcSpot, interest_Spots_dict[closest_training_camp_Spot])
+		path_list = astar(grid, npcSpot, closest_training_camp_Spot, npc)
 		for spot in path_list[::-1]:
 			npc.path_queue.put(spot)
 
 		npc.previous_state = "Going to school"
 		npc.current_state = "Moving along path"
 		npc.change_job(education_type)
-		
-	npcSpot = grid[npc.row][npc.col]
-	path_list = astar(grid, npcSpot, school_Spot)
-	for spot in path_list[::-1]:
-		npc.path_queue.put(spot)
+	else:	
+		path_list = astar(grid, grid[npc.row][npc.col], school_Spot, npc)
+		for spot in path_list[::-1]:
+			npc.path_queue.put(spot)
 
-	npc.previous_state = "Going to school"
-	npc.current_state = "Moving along path"
-	npc.change_job(education_type)
+		npc.previous_state = "Going to school"
+		npc.current_state = "Moving along path"
+		npc.change_job(education_type)
 
 
-def craft_item(item_type, resource_storage_dict, interest_Spots_dict, grid, npc_List):
+def craft_item(item_type: str, resource_storage_dict: dict, interest_Spots_dict: dict, grid: list, npc_List: list):
 	crafting_building = None
+	first_available_npc: NPC
 	if item_type == "Charcoal":
 		if not interest_Spots_dict["Kiln"]:
 			print("No charcoal kiln has been built")
@@ -990,6 +1014,18 @@ def craft_item(item_type, resource_storage_dict, interest_Spots_dict, grid, npc_
 			print("There's not enough wood to make charcoal")
 			return
 		crafting_building = "Kiln"
+		job_exists = False
+		for npc in npc_List:
+			if npc.job == "Kiln operator":
+				job_exists = True
+				if npc.current_state == "":
+					first_available_npc = npc
+		if job_exists == False:
+			print("No kiln operator has been trained")
+			return
+		if npc == None:
+			print("No kiln operator available")
+			return
 	
 	elif item_type == "Iron bar":
 		if not interest_Spots_dict["Forge"]:
@@ -1002,6 +1038,18 @@ def craft_item(item_type, resource_storage_dict, interest_Spots_dict, grid, npc_
 			print("There's not enough iron ore to make iron bars")
 			return
 		crafting_building = "Forge"
+		job_exists = False
+		for npc in npc_List:
+			if npc.job == "Forge worker":
+				job_exists = True
+				if npc.current_state == "":
+					first_available_npc = npc
+		if job_exists == False:
+			print("No forge worker has been trained")
+			return
+		if npc == None:
+			print("No forge worker available")
+			return
 	
 	elif item_type == "Sword":
 		if not interest_Spots_dict["Smithy"]:
@@ -1014,13 +1062,22 @@ def craft_item(item_type, resource_storage_dict, interest_Spots_dict, grid, npc_
 			print("There's not enough iron bars to make sword")
 			return
 		crafting_building = "Smithy"
+		job_exists = False
+		for npc in npc_List:
+			if npc.job == "Smith":
+				job_exists = True
+				if npc.current_state == "":
+					first_available_npc = npc
+		if job_exists == False:
+			print("No smith has been trained")
+			return
+		if npc == None:
+			print("No smith available")
+			return
+	
 
 
-	first_available_npc = None
-	for npc in npc_List:
-		if npc.job == "Worker":
-			if npc.current_state == "":
-				first_available_npc = npc
+	
 	print("going to", crafting_building)
 	closest_crafting_building = interest_Spots_dict[crafting_building][0]
 	for spot in interest_Spots_dict[crafting_building]:
@@ -1036,7 +1093,7 @@ def craft_item(item_type, resource_storage_dict, interest_Spots_dict, grid, npc_
 	if(item_type == "Sword"):
 		first_available_npc.task_queue.put(["Producing sword", closest_crafting_building])
 
-	path_list = astar(grid, grid[first_available_npc.row][first_available_npc.col], interest_Spots_dict["Storage"])
+	path_list = astar(grid, grid[first_available_npc.row][first_available_npc.col], interest_Spots_dict["Storage"], npc)
 	for spot in path_list[::-1]:
 		first_available_npc.path_queue.put(spot)
 
@@ -1063,7 +1120,7 @@ def gather_resource(resource_type, interest_spots_dict, npc_List, grid):
 				closest_resource_Spot = spot
 
 	first_best_npc_Spot = grid[first_best_npc.row][first_best_npc.col]
-	path_list = astar(grid, first_best_npc_Spot, closest_resource_Spot)
+	path_list = astar(grid, first_best_npc_Spot, closest_resource_Spot, npc)
 	for spot in path_list[::-1]:
 		first_best_npc.path_queue.put(spot)
 
@@ -1077,12 +1134,21 @@ def gather_resource(resource_type, interest_spots_dict, npc_List, grid):
 
 
 
-def build_building(building_type, resource_storage_dict, interest_Spots_dict, discovered_Spots, grid, npc_List):
+def build_building(building_type, resource_storage_dict, interest_Spots_dict, discovered_Spots, grid, npc_List: list[NPC]):
 	first_available_npc = None
+	job_exists = False
 	for npc in npc_List:
-		if npc.current_state == "":
-			first_available_npc = npc
-			break
+		if npc.job == "Builder":
+			job_exists = True
+			if npc.current_state == "":
+				first_available_npc = npc
+				break
+	if job_exists == False:
+		print("No builder has been trained")
+		return
+	elif first_available_npc == None:
+		print("no available npcs")
+		return
 
 	if resource_storage_dict["Wood"] >= 2:
 		if building_type == "smithy":
@@ -1105,7 +1171,7 @@ def build_building(building_type, resource_storage_dict, interest_Spots_dict, di
 		
 		first_available_npc.task_queue.put(["Building " + building_type, build_Spot])
 
-		path_list = astar(grid, grid[first_available_npc.row][first_available_npc.col], interest_Spots_dict["Storage"])
+		path_list = astar(grid, grid[first_available_npc.row][first_available_npc.col], interest_Spots_dict["Storage"], npc)
 		for spot in path_list[::-1]:
 			first_available_npc.path_queue.put(spot)
 		
@@ -1225,8 +1291,8 @@ def main(win, width):
 	end = Spot
 	discovered_Spots = {}
 	start, end, discovered_Spots = load_map(grid, 4)
-	oblivionNPCs = [NPC(24,24,width, "Steffe")]
-	oblivionNPCs.append(NPC(22,22,width, "Sven"))
+	oblivionNPCs = [NPC(24,24,width, "1. Steffe")]
+	oblivionNPCs.append(NPC(22,22,width, "2. Sven"))
 	#resource_pos_list = []
 	resource_storage_dict = {
 		"Wood": 10,
@@ -1261,6 +1327,17 @@ def main(win, width):
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				run = False
+			
+			if pygame.mouse.get_pressed()[0]: # left click
+				pos = pygame.mouse.get_pos()
+				row, col = get_clicked_pos(pos, ROWS, width)
+				print("Row:", row, "Col:", col)
+				
+
+			elif pygame.mouse.get_pressed()[2]: # right click
+				pos = pygame.mouse.get_pos()
+				row, col = get_clicked_pos(pos, ROWS, width)
+
 		
 			if event.type == pygame.KEYDOWN: 
 				if event.key == pygame.K_1:
@@ -1335,7 +1412,7 @@ def main(win, width):
 
 
 				elif event.key == pygame.K_s: # Go to school
-					go_to_school(oblivionNPCs[0], interest_spots_dict["School"], grid, "Explorer")
+					go_to_school(oblivionNPCs[0], grid, "Explorer", interest_spots_dict["School"])
 
 				elif event.key == pygame.K_a:
 					go_to_school(oblivionNPCs[1], interest_spots_dict["School"], grid, "Builder")
