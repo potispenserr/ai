@@ -290,7 +290,7 @@ class NPC:
 					self.open_stack.put(random_starter_spot)
 
 					if(h(self.get_pos(), self.next_Spot.get_pos()) < 2):
-						print("Distance to next spot is", h(self.get_pos(), self.next_Spot.get_pos()))
+						#print("Distance to next spot is", h(self.get_pos(), self.next_Spot.get_pos()))
 						self.go_to_Spot_instantly(grid, self.next_Spot)
 						self.previous_Spots.append(self.next_Spot)
 						if grid[self.row][self.col].type == "Swamp":
@@ -315,7 +315,7 @@ class NPC:
 		elif self.current_state == "Cutting down a tree": # Tree cutting
 			if self.resource_gathering_timer > 0:
 				self.resource_gathering_timer -= 1
-				print("Tree timer:", self.resource_gathering_timer)
+				print(self.name , ": Tree timer:", self.resource_gathering_timer)
 			else:
 				tree_Spot = grid[self.row][self.col]
 				tree_Spot.trees_left -= 1
@@ -337,26 +337,7 @@ class NPC:
 
 
 
-		elif self.current_state == "Mining iron": # Iron mining
-			if self.resource_gathering_timer > 0:
-				self.resource_gathering_timer -= 1
-				print("Iron timer:", self.resource_gathering_timer)
-			else:
-				iron_Spot = grid[self.row][self.col]
-				self.inventory = "Iron"
-				self.resource_gathering_timer = 30
-
-				grid[iron_Spot.row][iron_Spot.col].type = "Ground"
-				grid[iron_Spot.row][iron_Spot.col].color = BROWN
-				for spot in interest_Spots_dict["Iron"]:
-					if iron_Spot == spot:
-						interest_Spots_dict["Iron"].remove(spot)
-						print("removed iron")
-						print("Spot is now:", iron_Spot.type)
-				self.pathfind_to(grid, interest_Spots_dict["Storage"])
-
-				self.previous_state = "Taking resource to storage"
-				self.current_state = "Moving along path"
+		
 
 
 		elif self.current_state == "Producing charcoal": # Produce charcoal
@@ -476,6 +457,7 @@ class NPC:
 				self.change_state("")
 			else:
 				self.inventory = "Wood"
+				storage_dict["Wood"] -= 1
 				current_task = self.task_queue.get()
 				self.previous_state = current_task[0]
 				self.pathfind_to(grid, current_task[1])
@@ -493,6 +475,27 @@ class NPC:
 				self.previous_state = current_task[0]
 				self.pathfind_to(grid, current_task[1])
 
+				self.current_state = "Moving along path"
+		
+		elif self.current_state == "Mining iron": # Iron mining
+			if self.resource_gathering_timer > 0:
+				self.resource_gathering_timer -= 1
+				print("Iron timer:", self.resource_gathering_timer)
+			else:
+				iron_Spot = grid[self.row][self.col]
+				self.inventory = "Iron"
+				self.resource_gathering_timer = 30
+
+				grid[iron_Spot.row][iron_Spot.col].type = "Ground"
+				grid[iron_Spot.row][iron_Spot.col].color = BROWN
+				for spot in interest_Spots_dict["Iron"]:
+					if iron_Spot == spot:
+						interest_Spots_dict["Iron"].remove(spot)
+						print("removed iron")
+						print("Spot is now:", iron_Spot.type)
+				self.pathfind_to(grid, interest_Spots_dict["Storage"])
+
+				self.previous_state = "Taking resource to storage"
 				self.current_state = "Moving along path"
 		
 		elif self.current_state == "Getting iron": # Getting iron ore
@@ -963,12 +966,12 @@ def load_map(grid, mapnum):
 		startY = 0
 		startX +=1
 
-		grid[20][21].type = "Tree"
-		grid[20][21].color = DARK_GREEN
-		grid[20][21].trees_left = 5
+		grid[21][22].type = "Tree"
+		grid[21][22].color = DARK_GREEN
+		grid[21][22].trees_left = 5
 
-		grid[21][21].type = "Iron"
-		grid[21][21].color = IRON_GREY
+		grid[20][22].type = "Iron"
+		grid[20][22].color = IRON_GREY
 
 
 	f.close()
@@ -1145,6 +1148,7 @@ def gather_resource(resource_type, interest_spots_dict, npc_List, grid):
 		if npc.job == "Worker":
 			if npc.current_state == "":
 				first_best_npc = npc
+				break
 	if (first_best_npc == None):
 		print("No available workers to gather", resource_type)
 		return
@@ -1161,12 +1165,14 @@ def gather_resource(resource_type, interest_spots_dict, npc_List, grid):
 	path_list = astar(grid, first_best_npc_Spot, closest_resource_Spot, npc)
 	for spot in path_list[::-1]:
 		first_best_npc.path_queue.put(spot)
+	
+	print(first_best_npc.name, ": I'm going to cut down a tree at Row:", closest_resource_Spot.row, "Col:", closest_resource_Spot.col)
 
 	if(resource_type == "Tree"):
 		first_best_npc.previous_state = "Cutting down a tree"
 		first_best_npc.current_state = "Moving along path"
 
-	if(resource_type == "Iron"):
+	elif(resource_type == "Iron"):
 		first_best_npc.previous_state = "Mining iron"
 		first_best_npc.current_state = "Moving along path"
 
@@ -1361,6 +1367,7 @@ def main(win, width):
 	crafting_error = ""
 	run = True
 	update = 0
+	ai_master_timer = 0
 	while run:
 		draw(win, grid, ROWS, width, oblivionNPCs)
 
@@ -1370,7 +1377,7 @@ def main(win, width):
 			if event.type == pygame.QUIT:
 				run = False
 			
-			if pygame.mouse.get_pressed()[0]: # left click
+			""" if pygame.mouse.get_pressed()[0]: # left click
 				pos = pygame.mouse.get_pos()
 				row, col = get_clicked_pos(pos, ROWS, width)
 				print("Row:", row, "Col:", col)
@@ -1384,10 +1391,10 @@ def main(win, width):
 				if path_list == False:
 					print("Nope")
 				else:
-					""" for spot in path_list[::-1]:
+					for spot in path_list[::-1]:
 						oblivionNPCs[4].path_queue.put(spot)
-						oblivionNPCs[4].current_state = "Moving along path" """
-					print("yep")
+						oblivionNPCs[4].current_state = "Moving along path"
+					print("yep") """
 
 		
 			if event.type == pygame.KEYDOWN: 
@@ -1444,69 +1451,115 @@ def main(win, width):
 								interest_spots_dict[key].append(val)
 				
 				elif event.key == pygame.K_g: # multi character testing
+					if ai_master_timer <= 0:
+						ai_master_timer = 5
+						if len(master_task_list) > 0:
+							if crafting_error == "No kiln":
+								if master_task_list[0][0] == "Building kiln":
+									working_on_it = True
+									print("working on building a kiln")
+							elif crafting_error == "No kiln operator":
+								if master_task_list[0][0] == "Training kiln operator":
+									working_on_it = True
+									print("working on training kiln operator")
+							elif crafting_error == "" or crafting_error == None:
+								if master_task_list[0] == "Producing charcoal":
+									working_on_it = True
+									print("Working on producing charcoal")
+								
+						else:
+							working_on_it = False
+							crafting_error = ""
+						
+
+						if working_on_it == False:
+							if(resource_storage_dict["Wood"] > 2):
+								crafting_error = craft_item("Charcoal", resource_storage_dict, interest_spots_dict, grid, oblivionNPCs)
+								if crafting_error:
+									if crafting_error == "No kiln":
+										master_task_list.append(("Building kiln", build_building("kiln", resource_storage_dict, interest_spots_dict, discovered_Spots, grid, oblivionNPCs)))
+									elif crafting_error == "No kiln operator":
+										for npc in oblivionNPCs:
+											if npc.job == "Worker":
+												if npc.current_state == "":
+													go_to_school(npc, grid, "Kiln operator", interest_spots_dict["School"])
+													break
+										master_task_list.append(("Training kiln operator", npc))
+									elif crafting_error == "No available kiln operator":
+										print("woah chill out man")
+								else:
+									master_task_list.append(("Producing charcoal"))
+							else:
+								if len(interest_spots_dict["Tree"]) > 0:
+									gather_resource("Tree", interest_spots_dict, oblivionNPCs, grid)
+					else:
+						ai_master_timer -= 1
 
 					for shit in range(200):
 						for npc in oblivionNPCs:
-							npc.update(grid, interest_spots_dict, resource_storage_dict, master_task_list, working_on_it)
+							npc.update(grid, interest_spots_dict, resource_storage_dict, master_task_list)
 							draw(win, grid, ROWS, width, oblivionNPCs)
 							if npc.job == "Explorer" or npc.job == "Deep_Explorer":
 								update_dicts(interest_spots_dict, npc, discovered_Spots)
 				
 				elif event.key == pygame.K_u: # singlestepping update
-					if len(master_task_list) > 0:
-						if crafting_error == "No kiln":
-							if master_task_list[0][0] == "Building kiln":
-								working_on_it = True
-								print("working on building a kiln")
-						elif crafting_error == "No kiln operator":
-							if master_task_list[0][0] == "Training kiln operator":
-								working_on_it = True
-								print("working on training kiln operator")
-						elif crafting_error == "" or crafting_error == None:
-							if master_task_list[0] == "Producing charcoal":
-								working_on_it = True
-								print("Working on producing charcoal")
-							
-					else:
-						working_on_it = False
-						crafting_error = ""
-					
-
-					if working_on_it == False:
-						if(resource_storage_dict["Wood"] > 2):
-							crafting_error = craft_item("Charcoal", resource_storage_dict, interest_spots_dict, grid, oblivionNPCs)
-							if crafting_error:
-								if crafting_error == "No kiln":
-									master_task_list.append(("Building kiln", build_building("kiln", resource_storage_dict, interest_spots_dict, discovered_Spots, grid, oblivionNPCs)))
-								elif crafting_error == "No kiln operator":
-									for npc in oblivionNPCs:
-										if npc.job == "Worker":
-											if npc.current_state == "":
-												go_to_school(npc, grid, "Kiln operator", interest_spots_dict["School"])
-												break
-									master_task_list.append(("Training kiln operator", npc))
-								elif crafting_error == "No available kiln operator":
-									print("woah chill out man")
-							else:
-								master_task_list.append(("Producing charcoal"))
+					if ai_master_timer <= 0:
+						ai_master_timer = 5
+						if len(master_task_list) > 0:
+							if crafting_error == "No kiln":
+								if master_task_list[0][0] == "Building kiln":
+									working_on_it = True
+									print("working on building a kiln")
+							elif crafting_error == "No kiln operator":
+								if master_task_list[0][0] == "Training kiln operator":
+									working_on_it = True
+									print("working on training kiln operator")
+							elif crafting_error == "" or crafting_error == None:
+								if master_task_list[0] == "Producing charcoal":
+									working_on_it = True
+									print("Working on producing charcoal")
+								
 						else:
-							if len(interest_spots_dict["Tree"]) > 0:
-								gather_resource("Tree", interest_spots_dict, oblivionNPCs, grid)
+							working_on_it = False
+							crafting_error = ""
+						
+
+						if working_on_it == False:
+							if(resource_storage_dict["Wood"] > 2):
+								crafting_error = craft_item("Charcoal", resource_storage_dict, interest_spots_dict, grid, oblivionNPCs)
+								if crafting_error:
+									if crafting_error == "No kiln":
+										master_task_list.append(("Building kiln", build_building("kiln", resource_storage_dict, interest_spots_dict, discovered_Spots, grid, oblivionNPCs)))
+									elif crafting_error == "No kiln operator":
+										for npc in oblivionNPCs:
+											if npc.job == "Worker":
+												if npc.current_state == "":
+													go_to_school(npc, grid, "Kiln operator", interest_spots_dict["School"])
+													break
+										master_task_list.append(("Training kiln operator", npc))
+									elif crafting_error == "No available kiln operator":
+										print("woah chill out man")
+								else:
+									master_task_list.append(("Producing charcoal"))
+							else:
+								if len(interest_spots_dict["Tree"]) > 0:
+									print("going to gather wood")
+									gather_resource("Tree", interest_spots_dict, oblivionNPCs, grid)
+					else:
+						ai_master_timer -= 1
 
 					for npc in oblivionNPCs:
 						npc.update(grid, interest_spots_dict, resource_storage_dict, master_task_list)
-						draw(win, grid, ROWS, width, oblivionNPCs)
 						if npc.job == "Explorer" or npc.job == "Deep_Explorer":
 							update_dicts(interest_spots_dict, npc, discovered_Spots)
-					update +=1
-					#print("Update:", update)
+					draw(win, grid, ROWS, width, oblivionNPCs)
 
 
 
 				elif event.key == pygame.K_s: # Go to school
 					#go_to_school(oblivionNPCs[0], grid, "Deep_Explorer", interest_spots_dict["School"])
 					go_to_school(oblivionNPCs[0], grid, "Builder", interest_spots_dict["School"])
-					go_to_school(oblivionNPCs[1], grid, "Deep_Explorer", interest_spots_dict["School"])
+					go_to_school(oblivionNPCs[1], grid, "Explorer", interest_spots_dict["School"])
 
 				elif event.key == pygame.K_a:
 					go_to_school(oblivionNPCs[1], interest_spots_dict["School"], grid, "Builder")
