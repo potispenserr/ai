@@ -38,6 +38,8 @@ class Spot:
 		self.total_rows = total_rows
 		self.type = type
 		self.trees_left = trees_left
+		self.tree_list = []
+		self.tree_width = None
 		self.materials_here = None
 
 	def get_pos(self):
@@ -71,8 +73,16 @@ class Spot:
 	def reset(self):
 		self.color = WHITE
 
-	def add_trees(self, trees):
+	def add_trees(self, trees, tree_width):
 		self.trees_left = trees
+		self.tree_width = tree_width
+		for _ in range(trees):
+			random_x = random.randint(self.x, self.x + self.width)
+			random_y = random.randint(self.y, self.y + self.width)
+			self.tree_list.append((random_x, random_y))
+
+
+		#pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.width))
 
 	def make_start(self):
 		self.color = ORANGE
@@ -109,6 +119,9 @@ class Spot:
 
 	def draw(self, win): # draws the spot on the pygame window
 		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.width))
+		if self.type == "Tree" and not self.color == GREY:
+			for tree in self.tree_list:
+				pygame.draw.rect(win, DARK_GREEN, (tree[0], tree[1], self.tree_width, self.tree_width))
 
 	# adds walkable neighbors diagonally, up, down, left and right
 	# if a wall is next to a diagonal neighbor, the neighbor doesn't get added
@@ -316,13 +329,18 @@ class NPC:
 			if self.resource_gathering_timer > 0:
 				self.resource_gathering_timer -= 1
 				print(self.name , ": Tree timer:", self.resource_gathering_timer)
+				if grid[self.row][self.col].trees_left <= 0:
+					print(self.name, ": Oh, there's not any trees left. what a waste going here then")
+					self.change_state("")
+					self.resource_gathering_timer = 30
 			else:
 				tree_Spot = grid[self.row][self.col]
 				tree_Spot.trees_left -= 1
-				self.inventory = "Wood"
-				self.resource_gathering_timer = 30
 
-				if(tree_Spot.trees_left <= 0):
+				if(tree_Spot.trees_left == 0):
+					self.inventory = "Wood"
+					self.resource_gathering_timer = 30
+
 					grid[tree_Spot.row][tree_Spot.col].type = "Ground"
 					grid[tree_Spot.row][tree_Spot.col].color = BROWN
 					for spot in interest_Spots_dict["Tree"]:
@@ -330,10 +348,24 @@ class NPC:
 							interest_Spots_dict["Tree"].remove(spot)
 							print("removed tree")
 							print("Spot is now:", tree_Spot.type)
-				self.pathfind_to(grid, interest_Spots_dict["Storage"])
 
-				self.previous_state = "Taking resource to storage"
-				self.current_state = "Moving along path"
+					self.pathfind_to(grid, interest_Spots_dict["Storage"])
+
+					self.previous_state = "Taking resource to storage"
+					self.current_state = "Moving along path"
+
+				elif(tree_Spot.trees_left > 0):
+					self.inventory = "Wood"
+					self.resource_gathering_timer = 30
+
+					self.pathfind_to(grid, interest_Spots_dict["Storage"])
+
+					self.previous_state = "Taking resource to storage"
+					self.current_state = "Moving along path"
+
+				elif(tree_Spot.trees_left < 0):
+					print(self.name, ":There is no tree left, oh well")
+					self.change_state("")
 
 
 
@@ -678,11 +710,11 @@ class NPC:
 
 
 def h(p1, p2): # returns diagonal distance
-	x1, y1 = p1
-	x2, y2 = p2
-	return abs(x1 - x2) + abs(y1 - y2)
-
 	""" x1, y1 = p1
+	x2, y2 = p2
+	return abs(x1 - x2) + abs(y1 - y2) """
+
+	x1, y1 = p1
 	x2, y2 = p2
 	dx = abs(x1 - x2)
 	dy = abs(y1 - y2)
@@ -690,7 +722,7 @@ def h(p1, p2): # returns diagonal distance
 	d2 = 1 # diagonal distance between spots
 
 	h = d * (dx + dy) + (d2 - 2 * d) * min(dx, dy)
-	return h """
+	return h
 
 def manhattan_distance(p1, p2):
 	x1, y1 = p1
@@ -932,7 +964,7 @@ def load_map(grid, mapnum):
 			if char == "T":
 				grid[startY][startX].type = "Tree"
 				grid[startY][startX].color = GREY
-				grid[startY][startX].add_trees(5)
+				grid[startY][startX].add_trees(5, 1)
 			
 			if char == "V":
 				grid[startY][startX].type = "Water"
@@ -966,12 +998,12 @@ def load_map(grid, mapnum):
 		startY = 0
 		startX +=1
 
-		grid[21][22].type = "Tree"
+		""" grid[21][22].type = "Tree"
 		grid[21][22].color = DARK_GREEN
 		grid[21][22].trees_left = 5
 
 		grid[20][22].type = "Iron"
-		grid[20][22].color = IRON_GREY
+		grid[20][22].color = IRON_GREY """
 
 
 	f.close()
@@ -979,7 +1011,7 @@ def load_map(grid, mapnum):
 
 def reset_Spot(spot):
 	if spot.type == "Tree":
-		spot.color = DARK_GREEN
+		spot.color = BROWN
 
 	if spot.type == "Swamp":
 		spot.color = ACID_GREEN
@@ -1310,16 +1342,13 @@ def explore_spots(grid, npc, resource_pos_dict):
 	return
 
 
-def update_dicts(main_interest_Spots_dict, npc: NPC, main_discovered_Spots):
+def update_dicts(main_interest_Spots_dict: dict, npc: NPC, main_discovered_Spots: dict):
 	for key in npc.resource_pos_dict.keys():
-		if len(npc.resource_pos_dict[key]) > len(main_interest_Spots_dict[key]): # efficiency
-			if npc.job == "Deep_Explorer":
-				print(npc.resource_pos_dict[key])
-			for val in npc.resource_pos_dict[key]:
-				if val not in main_interest_Spots_dict[key]:
-					main_interest_Spots_dict[key].append(val)
-		else:
-			break
+		for val in npc.resource_pos_dict[key]:
+			if val not in main_interest_Spots_dict[key] and main_discovered_Spots.get(val, None) == None:
+				main_interest_Spots_dict[key].append(val)
+				print("Added", val.type, "at Row:", val.row, "Col: ", val.col)
+
 	for key in npc.discovered_Spots.keys():
 		if len(npc.discovered_Spots.keys()) > len(main_discovered_Spots.keys()):
 			if key not in main_discovered_Spots:
@@ -1340,6 +1369,8 @@ def main(win, width):
 	oblivionNPCs.append(NPC(22,22,width, "2. Georg"))
 	oblivionNPCs.append(NPC(22,22,width, "3. Roffe"))
 	oblivionNPCs.append(NPC(22,22,width, "4. SvetsarN"))
+	oblivionNPCs.append(NPC(22,22,width, "5. SvetsarN"))
+
 	master_task_list = []
 	resource_storage_dict = {
 		"Wood": 0,
@@ -1367,17 +1398,18 @@ def main(win, width):
 	crafting_error = ""
 	run = True
 	update = 0
+	    
 	ai_master_timer = 0
+	körbarakör = False
 	while run:
 		draw(win, grid, ROWS, width, oblivionNPCs)
-
 
 		
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				run = False
 			
-			""" if pygame.mouse.get_pressed()[0]: # left click
+			if pygame.mouse.get_pressed()[0]: # left click
 				pos = pygame.mouse.get_pos()
 				row, col = get_clicked_pos(pos, ROWS, width)
 				print("Row:", row, "Col:", col)
@@ -1394,7 +1426,7 @@ def main(win, width):
 					for spot in path_list[::-1]:
 						oblivionNPCs[4].path_queue.put(spot)
 						oblivionNPCs[4].current_state = "Moving along path"
-					print("yep") """
+					print("yep")
 
 		
 			if event.type == pygame.KEYDOWN: 
@@ -1438,7 +1470,7 @@ def main(win, width):
 					
 
 
-				elif event.key == pygame.K_b and start and end: # Explore Wide
+				elif event.key == pygame.K_b and start and end: # Explore Wide test
 					for npc in oblivionNPCs:
 						for row in grid:
 							for spot in row:
@@ -1450,7 +1482,7 @@ def main(win, width):
 							for val in discovered_resource_spots_dict[key]:
 								interest_spots_dict[key].append(val)
 				
-				elif event.key == pygame.K_g: # multi character testing
+				elif event.key == pygame.K_g: # multi character testing test
 					if ai_master_timer <= 0:
 						ai_master_timer = 5
 						if len(master_task_list) > 0:
@@ -1491,9 +1523,16 @@ def main(win, width):
 									master_task_list.append(("Producing charcoal"))
 							else:
 								if len(interest_spots_dict["Tree"]) > 0:
+									print("going to gather wood")
 									gather_resource("Tree", interest_spots_dict, oblivionNPCs, grid)
 					else:
 						ai_master_timer -= 1
+
+					for npc in oblivionNPCs:
+						npc.update(grid, interest_spots_dict, resource_storage_dict, master_task_list)
+						if npc.job == "Explorer" or npc.job == "Deep_Explorer":
+							update_dicts(interest_spots_dict, npc, discovered_Spots)
+					draw(win, grid, ROWS, width, oblivionNPCs)
 
 					for shit in range(200):
 						for npc in oblivionNPCs:
@@ -1501,8 +1540,8 @@ def main(win, width):
 							draw(win, grid, ROWS, width, oblivionNPCs)
 							if npc.job == "Explorer" or npc.job == "Deep_Explorer":
 								update_dicts(interest_spots_dict, npc, discovered_Spots)
-				
-				elif event.key == pygame.K_u: # singlestepping update
+			
+				if event.key == pygame.K_u: # singlestepping update
 					if ai_master_timer <= 0:
 						ai_master_timer = 5
 						if len(master_task_list) > 0:
@@ -1556,16 +1595,17 @@ def main(win, width):
 
 
 
-				elif event.key == pygame.K_s: # Go to school
+				if event.key == pygame.K_s: # Go to school test
 					#go_to_school(oblivionNPCs[0], grid, "Deep_Explorer", interest_spots_dict["School"])
 					go_to_school(oblivionNPCs[0], grid, "Builder", interest_spots_dict["School"])
 					go_to_school(oblivionNPCs[1], grid, "Explorer", interest_spots_dict["School"])
+					go_to_school(oblivionNPCs[5], grid, "Deep_Explorer", interest_spots_dict["School"])
 
 				elif event.key == pygame.K_a:
 					go_to_school(oblivionNPCs[1], interest_spots_dict["School"], grid, "Builder")
 
 
-				elif event.key == pygame.K_d and start and end: # Explore Deep
+				elif event.key == pygame.K_d and start and end: # Explore Deep test
 					for row in grid:
 						for spot in row:
 							spot.update_neighbors(grid)
@@ -1573,7 +1613,7 @@ def main(win, width):
 					npcPosition = grid[oblivionNPCs[0].row][oblivionNPCs[0].col]
 					pathList = explore_deep(lambda: draw(win, grid, ROWS, width), npcPosition, oblivionNPCs[0], discovered_Spots, grid)
 				
-				elif event.key == pygame.K_g and start and end: # Custom Greedy
+				elif event.key == pygame.K_g and start and end: # Custom Greedy test
 					for row in grid:
 						for spot in row:
 							spot.update_neighbors(grid)
@@ -1587,7 +1627,7 @@ def main(win, width):
 					end = None
 				
 
-				elif event.key == pygame.K_h: # Custom bullshit
+				elif event.key == pygame.K_h: # Custom test
 					resource_storage_dict["Wood"] += 20
 					print("adding wood")
 
@@ -1597,6 +1637,58 @@ def main(win, width):
 					grid = make_grid(ROWS, width) """
 					end = None
 					reset_map(grid)
+
+		if pygame.key.get_pressed()[pygame.K_y]: 
+			if ai_master_timer <= 0:
+				ai_master_timer = 5
+				if len(master_task_list) > 0:
+					if crafting_error == "No kiln":
+						if master_task_list[0][0] == "Building kiln":
+							working_on_it = True
+							print("working on building a kiln")
+					elif crafting_error == "No kiln operator":
+						if master_task_list[0][0] == "Training kiln operator":
+							working_on_it = True
+							print("working on training kiln operator")
+					elif crafting_error == "" or crafting_error == None:
+						if master_task_list[0] == "Producing charcoal":
+							working_on_it = True
+							print("Working on producing charcoal")
+						
+				else:
+					working_on_it = False
+					crafting_error = ""
+				
+
+				if working_on_it == False:
+					if(resource_storage_dict["Wood"] > 2):
+						crafting_error = craft_item("Charcoal", resource_storage_dict, interest_spots_dict, grid, oblivionNPCs)
+						if crafting_error:
+							if crafting_error == "No kiln":
+								master_task_list.append(("Building kiln", build_building("kiln", resource_storage_dict, interest_spots_dict, discovered_Spots, grid, oblivionNPCs)))
+							elif crafting_error == "No kiln operator":
+								for npc in oblivionNPCs:
+									if npc.job == "Worker":
+										if npc.current_state == "":
+											go_to_school(npc, grid, "Kiln operator", interest_spots_dict["School"])
+											break
+								master_task_list.append(("Training kiln operator", npc))
+							elif crafting_error == "No available kiln operator":
+								print("woah chill out man")
+						else:
+							master_task_list.append(("Producing charcoal"))
+					else:
+						if len(interest_spots_dict["Tree"]) > 0:
+							print("going to gather wood")
+							gather_resource("Tree", interest_spots_dict, oblivionNPCs, grid)
+			else:
+				ai_master_timer -= 1
+
+			for npc in oblivionNPCs:
+				npc.update(grid, interest_spots_dict, resource_storage_dict, master_task_list)
+				if npc.job == "Explorer" or npc.job == "Deep_Explorer":
+					update_dicts(interest_spots_dict, npc, discovered_Spots)
+			#draw(win, grid, ROWS, width, oblivionNPCs)
 
 			
 
