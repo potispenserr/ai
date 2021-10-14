@@ -44,6 +44,9 @@ class Spot:
 
 	def get_pos(self):
 		return self.row, self.col
+	
+	def get_grid_Spot_here(self, grid):
+		return grid[self.row][self.col]
 
 	def is_closed(self):
 		return self.color == RED
@@ -185,7 +188,7 @@ class NPC:
 		self.discovered_Spots = {}
 		self.previous_Spots = []
 		self.schooling_left = 5
-		self.resource_gathering_timer = 10
+		self.resource_gathering_timer = 30
 		self.crafting_timer = 0
 		self.inventory = ""
 		self.build_timer = 0
@@ -209,7 +212,9 @@ class NPC:
 	def move_to_Spot(self, grid, spot):
 		pass
 		
-		
+	def get_grid_Spot_here(self, grid):
+		return grid[self.row][self.col]
+
 	def get_pos(self):
 		return self.row, self.col
 	
@@ -336,13 +341,14 @@ class NPC:
 			else:
 				tree_Spot = grid[self.row][self.col]
 				tree_Spot.trees_left -= 1
+				tree_Spot.tree_list.pop()
 
 				if(tree_Spot.trees_left == 0):
 					self.inventory = "Wood"
 					self.resource_gathering_timer = 30
 
+					#tree_Spot.tree_list.pop()
 					grid[tree_Spot.row][tree_Spot.col].type = "Ground"
-					grid[tree_Spot.row][tree_Spot.col].color = BROWN
 					for spot in interest_Spots_dict["Tree"]:
 						if tree_Spot == spot:
 							interest_Spots_dict["Tree"].remove(spot)
@@ -384,7 +390,7 @@ class NPC:
 				self.previous_state = "Getting wood"
 				self.current_state = "Moving along path"
 				self.task_queue.put(["Producing charcoal", grid[self.row][self.col]])
-				self.crafting_timer = 10
+				self.crafting_timer = 30
 
 			
 			elif grid[self.row][self.col].materials_here["Wood"] >= 2:
@@ -447,11 +453,11 @@ class NPC:
 				self.previous_state = "Getting wood"
 				self.current_state = "Moving along path"
 				self.task_queue.put(["Building smithy", grid[self.row][self.col]])
-				self.build_timer = 20
+				self.build_timer = 180
 
 			
-			elif grid[self.row][self.col].materials_here["Wood"] >= 2:
-				if grid[self.row][self.col].materials_here["Iron bar"] >= 2:
+			elif grid[self.row][self.col].materials_here["Wood"] >= 10:
+				if grid[self.row][self.col].materials_here["Iron bar"] >= 3:
 					if self.build_timer <= 0:
 						interest_Spots_dict["Smithy"].append(grid[self.row][self.col])
 						grid[self.row][self.col].type = "Building"
@@ -564,10 +570,15 @@ class NPC:
 				self.previous_state = "Getting wood"
 				self.current_state = "Moving along path"
 				self.task_queue.put([building_state_string, grid[self.row][self.col]])
-				self.build_timer = 10
+				if(building_type == "Kiln"):
+					self.build_timer = 60
+				elif(building_type == "Forge"):
+					self.build_timer = 180
+				elif(building_type == "Training camp"):
+					self.build_timer = 120
 
 			
-			elif grid[self.row][self.col].materials_here["Wood"] >= 2:
+			elif grid[self.row][self.col].materials_here["Wood"] >= 10:
 				if self.build_timer <= 0:
 					
 					interest_Spots_dict[building_type].append(grid[self.row][self.col])
@@ -964,7 +975,7 @@ def load_map(grid, mapnum):
 			if char == "T":
 				grid[startY][startX].type = "Tree"
 				grid[startY][startX].color = GREY
-				grid[startY][startX].add_trees(5, 1)
+				grid[startY][startX].add_trees(5, 2)
 			
 			if char == "V":
 				grid[startY][startX].type = "Water"
@@ -1037,7 +1048,7 @@ def reset_map(grid):
 		for spot in row:
 			reset_Spot(spot)
 
-def go_to_school(npc, grid, education_type, school_Spot = None, interest_Spots_list = None, storage_dict = None):
+def go_to_school(npc: NPC, grid, education_type, school_Spot = None, interest_Spots_list = None, storage_dict = None):
 	if education_type == "Soldier":
 		if not interest_Spots_list:
 			print("No training camp has been built")
@@ -1062,6 +1073,13 @@ def go_to_school(npc, grid, education_type, school_Spot = None, interest_Spots_l
 		path_list = astar(grid, grid[npc.row][npc.col], school_Spot, npc)
 		for spot in path_list[::-1]:
 			npc.path_queue.put(spot)
+		
+		if(education_type == "Builder"):
+			npc.schooling_left = 120
+		elif(education_type == "Charcoal kiln operator"):
+			npc.schooling_left = 120
+		elif(education_type == "Explorer" or education_type == "Deep_Explorer"):
+			npc.schooling_left = 60
 
 		npc.previous_state = "Going to school"
 		npc.current_state = "Moving along path"
@@ -1189,13 +1207,16 @@ def gather_resource(resource_type, interest_spots_dict, npc_List, grid):
 		return
 
 	closest_resource_Spot = interest_spots_dict[resource_type][0]
+	closest_path_list = []
+	path_list = []
 	for spot in interest_spots_dict[resource_type]:
-			if(h(first_best_npc.get_pos(), spot.get_pos()) < h(first_best_npc.get_pos(), closest_resource_Spot.get_pos())):
+			closest_path_list = astar(grid, first_best_npc.get_grid_Spot_here(grid), closest_resource_Spot.get_grid_Spot_here(grid), first_best_npc)
+			path_list = astar(grid, first_best_npc.get_grid_Spot_here(grid), spot.get_grid_Spot_here(grid), first_best_npc)
+			if len(closest_path_list) > len(path_list):
 				closest_resource_Spot = spot
+				closest_path_list = path_list
 
-	first_best_npc_Spot = grid[first_best_npc.row][first_best_npc.col]
-	path_list = astar(grid, first_best_npc_Spot, closest_resource_Spot, npc)
-	for spot in path_list[::-1]:
+	for spot in closest_path_list[::-1]:
 		first_best_npc.path_queue.put(spot)
 	
 	print(first_best_npc.name, ": I'm going to cut down a tree at Row:", closest_resource_Spot.row, "Col:", closest_resource_Spot.col)
@@ -1413,6 +1434,10 @@ def main(win, width):
 				pos = pygame.mouse.get_pos()
 				row, col = get_clicked_pos(pos, ROWS, width)
 				print("Row:", row, "Col:", col)
+				try:
+					grid[row][col].tree_list.pop()
+				except:
+					print("not a tree anymore or at all")
 				
 				
 
