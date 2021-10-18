@@ -1,0 +1,30 @@
+{
+    "education_timers": {
+        "Explorer": 60,
+        "Deep_Explorer": 60,
+        "Soldier": 60,
+        "Builder": 120,
+        "Kiln operator": 120,
+        "Smith": 120,
+        "Forge worker": 120
+    },
+
+    "building_timers": {
+        "Training camp": 120,
+        "Charcoal kiln": 60,
+        "Smithy": 180,
+        "Forge worker": 120
+    },
+
+    "crafting_timers": {
+        "Charcoal": 30,
+        "Iron bar": 60,
+        "Sword": 60
+    },
+
+    "gathering_timers": {
+        "Tree": 30,
+        "Iron": 30,
+        "Sword": 60
+    }
+}
