@@ -1455,10 +1455,9 @@ def main(win, width):
 	working_on_it = False
 	crafting_error = ""
 	run = True
-	update = 0
 	    
 	ai_master_timer = 0
-	körbarakör = False
+	avaiable_workers_count = 0
 
 	go_to_school(oblivionNPCs[0], grid, "Builder", interest_spots_dict["School"])
 	go_to_school(oblivionNPCs[1], grid, "Explorer", interest_spots_dict["School"])
@@ -1470,37 +1469,42 @@ def main(win, width):
 		draw(win, grid, ROWS, width, oblivionNPCs)
 
 		if resource_storage_dict["Charcoal"] > 200:
-			print("we did it reddit")
+			print("we did it guys")
 			print("Charcoal:", resource_storage_dict["Charcoal"])
 			break
 
 		if ai_master_timer <= 0:
-			ai_master_timer = 5
+			ai_master_timer = 2
 			if len(master_task_list) > 0:
 				if crafting_error == "No kiln":
 					if master_task_list[0][0] == "Building kiln":
-						working_on_it = True
+						#working_on_it = True
 						print("working on building a kiln from crafting error")
 				elif crafting_error == "No kiln operator":
 					if master_task_list[0][0] == "Training kiln operator":
-						working_on_it = True
+						#working_on_it = True
 						print("working on training kiln operator")
 				elif crafting_error == "" or crafting_error == None:
 					if master_task_list[0] == "Producing charcoal":
-						working_on_it = True
+						#working_on_it = True
 						print("Working on producing charcoal")
 				elif master_task_list[0][0] == "Building kiln":
-					working_on_it = True
+					#working_on_it = True
 					print("just working on a kiln")
 
 					
 					
 			else:
-				working_on_it = False
+				#working_on_it = False
 				crafting_error = ""
 			
+			for npc in oblivionNPCs:
+				if npc.job == "Worker" and npc.current_state == "":
+					avaiable_workers_count += 1
 
-			if working_on_it == False:
+
+			#if working_on_it == False:
+			if avaiable_workers_count > 2:
 				if(resource_storage_dict["Wood"] > 2):
 					if len(interest_spots_dict["Kiln"]) < 5:
 						worker_to_become_kiln_operator = None
@@ -1884,7 +1888,7 @@ def main(win, width):
 			
 
 	endTime = time.perf_counter()
-	print("Elapsed game time:", (endTime-startTime))
+	print("Elapsed game time:", (endTime-startTime) / 60, "minutes")
 
 	pygame.quit()
 
