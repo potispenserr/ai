@@ -11,9 +11,8 @@
 
     "building_timers": {
         "Training camp": 120,
-        "Charcoal kiln": 60,
-        "Smithy": 180,
-        "Forge worker": 120
+        "Kiln": 60,
+        "Smithy": 180
     },
 
     "crafting_timers": {
@@ -24,7 +23,18 @@
 
     "gathering_timers": {
         "Tree": 30,
-        "Iron": 30,
-        "Sword": 60
+        "Iron": 30
+    },
+
+    "item_recipies": {
+        "Charcoal": {"Wood": 2},
+        "Iron bar": {"Iron": 2, "Charcoal": 3},
+        "Sword": {"Iron bar": 1, "Charcoal": 2}
+    },
+    "building_recipies": {
+        "Kiln": {"Wood": 10},
+        "Smithy": {"Iron bar": 3, "Wood": 10},
+        "Forge": {"Wood": 10},
+        "Training camp": {"Wood": 10}
     }
 }

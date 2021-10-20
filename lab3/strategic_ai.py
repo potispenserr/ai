@@ -1,10 +1,8 @@
-#from typing import Counter
 import pygame
-import math
-import os
 import queue
 import time
 import random
+import json
 
 WIDTH = 700
 WIN = pygame.display.set_mode((WIDTH, WIDTH))
@@ -227,7 +225,7 @@ class NPC:
 		self.previous_state = self.current_state
 		self.current_state = new_state
 	
-	def update(self, grid, interest_Spots_dict, storage_dict, master_task_list: list):
+	def update(self, grid, interest_Spots_dict, storage_dict, master_task_list: list, design_doc_dict):
 		if self.current_state == "Exploring": # Exploring
 			if self.swamp_timer > 0:
 				#print("Ugh i'm stuck in the swamp")
@@ -352,14 +350,14 @@ class NPC:
 							interest_Spots_dict["Tree"].remove(tree)
 							print("removed tree at Row:", tree.row, "Col:", tree.col)
 					self.change_state("")
-					self.resource_gathering_timer = 30
+					self.resource_gathering_timer = design_doc_dict["gathering_timers"]["Tree"]
 					return
 			else:
 				tree_Spot = grid[self.row][self.col]
 				if grid[self.row][self.col].trees_left <= 0:
 					print(self.name, ": Oh, there's not any trees left. what a waste going here then")
 					self.change_state("")
-					self.resource_gathering_timer = 30
+					self.resource_gathering_timer = design_doc_dict["gathering_timers"]["Tree"]
 					for tree in interest_Spots_dict["Tree"]:
 						if tree.get_grid_Spot_here(grid) == self.get_grid_Spot_here(grid):
 							interest_Spots_dict["Tree"].remove(tree)
@@ -370,7 +368,7 @@ class NPC:
 
 				if(tree_Spot.trees_left == 0):
 					self.inventory = "Wood"
-					self.resource_gathering_timer = 30
+					self.resource_gathering_timer = design_doc_dict["gathering_timers"]["Tree"]
 
 					#tree_Spot.tree_list.pop()
 					#grid[tree_Spot.row][tree_Spot.col].type = "Ground"
@@ -387,7 +385,7 @@ class NPC:
 
 				elif(tree_Spot.trees_left > 0):
 					self.inventory = "Wood"
-					self.resource_gathering_timer = 30
+					self.resource_gathering_timer = design_doc_dict["gathering_timers"]["Tree"]
 
 					self.pathfind_to(grid, interest_Spots_dict["Storage"])
 
@@ -415,10 +413,10 @@ class NPC:
 				self.previous_state = "Getting wood"
 				self.current_state = "Moving along path"
 				self.task_queue.put(["Producing charcoal", grid[self.row][self.col]])
-				self.crafting_timer = 30
+				self.resource_gathering_timer = design_doc_dict["crafting_timers"]["Charcoal"]
 
 			
-			elif grid[self.row][self.col].materials_here["Wood"] >= 2:
+			elif grid[self.row][self.col].materials_here["Wood"] >= design_doc_dict["item_recipies"]["Charcoal"]["Wood"]:
 				if self.crafting_timer <= 0:
 					print("The charcoal is now done")
 					self.inventory = "Charcoal"
@@ -439,7 +437,7 @@ class NPC:
 			else:
 				grid[self.row][self.col].materials_here["Wood"] += 1
 				self.inventory = ""
-				if grid[self.row][self.col].materials_here["Wood"] >= 2:
+				if grid[self.row][self.col].materials_here["Wood"] >= design_doc_dict["item_recipies"]["Charcoal"]["Wood"]:
 					return
 
 				self.previous_state = "Getting wood"
@@ -450,20 +448,20 @@ class NPC:
 				print("might need to get more wood for the kiln")
 		
 		elif self.current_state == "Producing iron bar":
-			self.produce_tier_2_items(grid, interest_Spots_dict, self.current_state, "Iron bar")
+			self.produce_tier_2_items(grid, interest_Spots_dict, self.current_state, "Iron bar", design_doc_dict)
 		
 		elif self.current_state == "Producing sword":
-			self.produce_tier_2_items(grid, interest_Spots_dict, self.current_state, "Sword")
+			self.produce_tier_2_items(grid, interest_Spots_dict, self.current_state, "Sword", design_doc_dict)
 
 		
 		elif self.current_state == "Building kiln": # Kiln building
-			self.build_tier_1_building(grid, interest_Spots_dict, self.current_state, "Kiln", master_task_list)
+			self.build_tier_1_building(grid, interest_Spots_dict, self.current_state, "Kiln", master_task_list, design_doc_dict)
 
 		elif self.current_state == "Building forge": # Build forge
-			self.build_tier_1_building(grid, interest_Spots_dict, self.current_state, "Forge", master_task_list)
+			self.build_tier_1_building(grid, interest_Spots_dict, self.current_state, "Forge", master_task_list, design_doc_dict)
 		
 		elif self.current_state == "Building training camp": # Build training camp
-			self.build_tier_1_building(grid, interest_Spots_dict, self.current_state, "Training camp", master_task_list)
+			self.build_tier_1_building(grid, interest_Spots_dict, self.current_state, "Training camp", master_task_list, design_doc_dict)
 	
 		elif self.current_state == "Building smithy": # Build smithy aka the only "tier 2" building
 			if not grid[self.row][self.col].materials_here:
@@ -477,11 +475,11 @@ class NPC:
 				self.previous_state = "Getting wood"
 				self.current_state = "Moving along path"
 				self.task_queue.put(["Building smithy", grid[self.row][self.col]])
-				self.build_timer = 180
+				self.build_timer = design_doc_dict["building_timers"]["Smithy"]
 
 			
-			elif grid[self.row][self.col].materials_here["Wood"] >= 10:
-				if grid[self.row][self.col].materials_here["Iron bar"] >= 3:
+			elif grid[self.row][self.col].materials_here["Wood"] >= design_doc_dict["building_recipies"]["Smithy"]["Wood"]:
+				if grid[self.row][self.col].materials_here["Iron bar"] >= design_doc_dict["building_recipies"]["Smithy"]["Iron bar"]:
 					if self.build_timer <= 0:
 						interest_Spots_dict["Smithy"].append(grid[self.row][self.col])
 						grid[self.row][self.col].type = "Building"
@@ -546,7 +544,7 @@ class NPC:
 			else:
 				iron_Spot = grid[self.row][self.col]
 				self.inventory = "Iron"
-				self.resource_gathering_timer = 30
+				self.resource_gathering_timer = design_doc_dict["gathering_timers"]["Tree"]
 
 				grid[iron_Spot.row][iron_Spot.col].type = "Ground"
 				grid[iron_Spot.row][iron_Spot.col].color = BROWN
@@ -582,7 +580,7 @@ class NPC:
 			print(self.name, "has a unimplemented state", self.current_state)
 
 
-	def build_tier_1_building(self, grid, interest_Spots_dict, building_state_string, building_type, master_task_list): # Build tier one building
+	def build_tier_1_building(self, grid, interest_Spots_dict, building_state_string, building_type, master_task_list, design_doc_dict): # Build tier one building
 			if not grid[self.row][self.col].materials_here: # When worker first arrives at the build spot
 				grid[self.row][self.col].materials_here = {
 					"Wood": 1
@@ -594,15 +592,11 @@ class NPC:
 				self.previous_state = "Getting wood"
 				self.current_state = "Moving along path"
 				self.task_queue.put([building_state_string, grid[self.row][self.col]])
-				if(building_type == "Kiln"):
-					self.build_timer = 60
-				elif(building_type == "Forge"):
-					self.build_timer = 180
-				elif(building_type == "Training camp"):
-					self.build_timer = 120
+
+				self.build_timer = design_doc_dict["building_timers"][building_type]
 
 			
-			elif grid[self.row][self.col].materials_here["Wood"] >= 10:
+			elif grid[self.row][self.col].materials_here["Wood"] >= design_doc_dict["building_recipies"][building_type]["Wood"]:
 				if self.build_timer <= 0:
 					
 					interest_Spots_dict[building_type].append(grid[self.row][self.col])
@@ -624,7 +618,7 @@ class NPC:
 			else:
 				grid[self.row][self.col].materials_here["Wood"] += 1
 				self.inventory = ""
-				if grid[self.row][self.col].materials_here["Wood"] >= 2:
+				if grid[self.row][self.col].materials_here["Wood"] >= design_doc_dict["building_recipies"][building_type]["Wood"]:
 					return
 
 				self.previous_state = "Getting wood"
@@ -634,7 +628,7 @@ class NPC:
 
 
 
-	def produce_tier_2_items(self, grid, interest_Spots_dict, crafting_state_string, item_type):
+	def produce_tier_2_items(self, grid, interest_Spots_dict, crafting_state_string, item_type, design_doc_dict):
 		if grid[self.row][self.col].materials_here["Wood"] == 0:
 				if(item_type == "Iron bar"):
 					grid[self.row][self.col].materials_here = {
@@ -653,12 +647,12 @@ class NPC:
 				self.previous_state = "Getting wood"
 				self.current_state = "Moving along path"
 				self.task_queue.put([crafting_state_string, grid[self.row][self.col]])
-				self.crafting_timer = 10
+				self.crafting_timer = design_doc_dict["crafting_timers"][item_type]
 
 			
-		elif grid[self.row][self.col].materials_here["Wood"] >= 2:
+		elif grid[self.row][self.col].materials_here["Wood"] >= design_doc_dict["item_recipies"][item_type]["Wood"]:
 			try:
-				if grid[self.row][self.col].materials_here["Iron bar"] >= 2:
+				if grid[self.row][self.col].materials_here["Iron bar"] >= design_doc_dict["item_recipies"][item_type]["Iron bar"]:
 					if self.crafting_timer <= 0:
 						print("The", item_type, "is now done")
 						self.inventory = item_type
@@ -689,7 +683,7 @@ class NPC:
 				pass
 			try:
 				# If iron ore is on the Spot instead of iron bars
-				if grid[self.row][self.col].materials_here["Iron"] >= 2:
+				if grid[self.row][self.col].materials_here["Iron"] >= design_doc_dict["item_recipies"][item_type]["Iron"]:
 					if self.crafting_timer <= 0:
 						print("The", item_type, "is now done")
 						self.inventory = item_type
@@ -722,7 +716,7 @@ class NPC:
 		else:
 			grid[self.row][self.col].materials_here["Wood"] += 1
 			self.inventory = ""
-			if grid[self.row][self.col].materials_here["Wood"] >= 2:
+			if grid[self.row][self.col].materials_here["Wood"] >= design_doc_dict["item_recipies"][item_type]["Wood"]:
 					return
 
 			self.pathfind_to(grid, interest_Spots_dict["Storage"])
@@ -1081,7 +1075,7 @@ def reset_map(grid):
 		for spot in row:
 			reset_Spot(spot)
 
-def go_to_school(npc: NPC, grid, education_type, school_Spot = None, interest_Spots_list = None, storage_dict = None):
+def go_to_school(npc: NPC, grid, education_type, design_doc_dict, school_Spot = None, interest_Spots_list = None, storage_dict = None):
 	if education_type == "Soldier":
 		if not interest_Spots_list:
 			print("No training camp has been built")
@@ -1107,23 +1101,25 @@ def go_to_school(npc: NPC, grid, education_type, school_Spot = None, interest_Sp
 		for spot in path_list[::-1]:
 			npc.path_queue.put(spot)
 		
-		if(education_type == "Builder"):
+		npc.schooling_left = design_doc_dict["education_timers"][education_type]
+		
+		""" if(education_type == "Builder"):
 			npc.schooling_left = 120
 		elif(education_type == "Charcoal kiln operator"):
 			npc.schooling_left = 120
 		elif(education_type == "Explorer" or education_type == "Deep_Explorer"):
-			npc.schooling_left = 60
+			npc.schooling_left = 60 """
 
 		npc.previous_state = "Going to school"
 		npc.current_state = "Moving along path"
 		npc.change_job(education_type)
 
 
-def craft_item(item_type: str, resource_storage_dict: dict, interest_Spots_dict: dict, grid: list, npc_List: list):
+def craft_item(item_type: str, resource_storage_dict: dict, interest_Spots_dict: dict, grid: list, npc_List: list, design_doc_dict):
 	crafting_building = None
 	first_available_npc = None
 	if item_type == "Charcoal":
-		if resource_storage_dict["Wood"] < 2:
+		if resource_storage_dict["Wood"] < design_doc_dict["item_recipies"]["Charcoal"]["Wood"]:
 			print("There's not enough wood to make charcoal")
 			return "No wood"
 
@@ -1152,10 +1148,10 @@ def craft_item(item_type: str, resource_storage_dict: dict, interest_Spots_dict:
 		if not interest_Spots_dict["Forge"]:
 			print("No forge has been built")
 			return
-		elif resource_storage_dict["Charcoal"] < 2:
+		elif resource_storage_dict["Charcoal"] < design_doc_dict["item_recipies"]["Iron bar"]["Charcoal"]:
 			print("There's not enough charcoal to make iron bars")
 			return
-		elif resource_storage_dict["Iron"] < 2:
+		elif resource_storage_dict["Iron"] < design_doc_dict["item_recipies"]["Iron bar"]["Iron"]:
 			print("There's not enough iron ore to make iron bars")
 			return
 		crafting_building = "Forge"
@@ -1176,10 +1172,10 @@ def craft_item(item_type: str, resource_storage_dict: dict, interest_Spots_dict:
 		if not interest_Spots_dict["Smithy"]:
 			print("No smithy has been built")
 			return
-		elif resource_storage_dict["Charcoal"] < 2:
+		elif resource_storage_dict["Charcoal"] < design_doc_dict["item_recipies"]["Sword"]["Charcoal"]:
 			print("There's not enough charcoal to make sword")
 			return
-		elif resource_storage_dict["Iron bar"] < 2:
+		elif resource_storage_dict["Iron bar"] < design_doc_dict["item_recipies"]["Sword"]["Iron bar"]:
 			print("There's not enough iron bars to make sword")
 			return
 		crafting_building = "Smithy"
@@ -1265,7 +1261,7 @@ def gather_resource(resource_type, interest_spots_dict, npc_List, grid):
 
 
 
-def build_building(building_type, resource_storage_dict, interest_Spots_dict, discovered_Spots, grid, npc_List: list[NPC]):
+def build_building(building_type, resource_storage_dict, interest_Spots_dict, discovered_Spots, grid, npc_List: list[NPC], design_doc_dict):
 	first_available_npc = None
 	job_exists = False
 	for npc in npc_List:
@@ -1281,9 +1277,9 @@ def build_building(building_type, resource_storage_dict, interest_Spots_dict, di
 		print("no available npcs")
 		return
 
-	if resource_storage_dict["Wood"] >= 2:
+	if resource_storage_dict["Wood"] >= design_doc_dict["building_recipies"]["Kiln"]["Wood"]:
 		if building_type == "smithy":
-			if resource_storage_dict["Iron bar"] >= 2:
+			if resource_storage_dict["Iron bar"] >= design_doc_dict["building_recipies"]["Smithy"]["Iron bar"]:
 				print("starting to build", building_type)
 				build_Spot = None
 				for spot in discovered_Spots:
@@ -1424,7 +1420,7 @@ def main(win, width):
 	oblivionNPCs.append(NPC(22, 22, width, "2. Georg"))
 	oblivionNPCs.append(NPC(22, 22, width, "3. Roffe"))
 	oblivionNPCs.append(NPC(22, 22, width, "4. SvetsarN"))
-	oblivionNPCs.append(NPC(22, 22, width, "5. SvetsarN"))
+	oblivionNPCs.append(NPC(22, 22, width, "5. Svets"))
 
 	for i in range(45):
 		oblivionNPCs.append(NPC(22, 22, width, str(i) + ". Nånting"))
@@ -1449,20 +1445,36 @@ def main(win, width):
 	interest_spots_dict.setdefault("Smithy", [])
 	interest_spots_dict.setdefault("Training camp", [])
 
+	design_doc_dict = {}
+
 	for row in grid:
 		for spot in row:
 			spot.update_neighbors(grid)
-	#working_on_it = False
+
 	crafting_error = ""
 	run = True
 	    
 	ai_master_timer = 0
 	avaiable_workers_count = 0
 
-	go_to_school(oblivionNPCs[0], grid, "Builder", interest_spots_dict["School"])
-	go_to_school(oblivionNPCs[1], grid, "Explorer", interest_spots_dict["School"])
-	go_to_school(oblivionNPCs[2], grid, "Deep_Explorer", interest_spots_dict["School"])
-	go_to_school(oblivionNPCs[3], grid, "Deep_Explorer", interest_spots_dict["School"])
+	print("Started Reading JSON file")
+	with open("variables.json", "r") as read_file:
+		print("Starting to convert json decoding")
+		design_doc_dict = json.load(read_file)
+
+		print("Decoded JSON Data From File")
+		for key, value in design_doc_dict.items():
+			print(key, ":", value)
+		print("Done reading json file")
+
+	for key in design_doc_dict["item_recipies"]["Iron bar"]:
+		print(key, ":", design_doc_dict["item_recipies"]["Iron bar"][key])
+
+	go_to_school(oblivionNPCs[0], grid, "Builder", design_doc_dict, interest_spots_dict["School"])
+	go_to_school(oblivionNPCs[1], grid, "Explorer", design_doc_dict, interest_spots_dict["School"])
+	go_to_school(oblivionNPCs[2], grid, "Deep_Explorer", design_doc_dict, interest_spots_dict["School"])
+	go_to_school(oblivionNPCs[3], grid, "Deep_Explorer", design_doc_dict, interest_spots_dict["School"])
+
 
 	startTime = time.perf_counter()
 	while run:
@@ -1505,7 +1517,7 @@ def main(win, width):
 
 			#if working_on_it == False:
 			if avaiable_workers_count > 2:
-				if(resource_storage_dict["Wood"] > 2):
+				if(resource_storage_dict["Wood"] > design_doc_dict["building_recipies"]["Kiln"]["Wood"]):
 					if len(interest_spots_dict["Kiln"]) < 5:
 						worker_to_become_kiln_operator = None
 						first_available_builder = None
@@ -1516,14 +1528,14 @@ def main(win, width):
 								first_available_builder = npc
 
 						if worker_to_become_kiln_operator != None and first_available_builder != None:
-							master_task_list.append(("Building kiln", build_building("kiln", resource_storage_dict, interest_spots_dict, discovered_Spots, grid, oblivionNPCs)))
-							go_to_school(worker_to_become_kiln_operator, grid, "Kiln operator", interest_spots_dict["School"])
+							master_task_list.append(("Building kiln", build_building("kiln", resource_storage_dict, interest_spots_dict, discovered_Spots, grid, oblivionNPCs, design_doc_dict)))
+							go_to_school(worker_to_become_kiln_operator, grid, "Kiln operator", design_doc_dict, interest_spots_dict["School"])
 						else:
 							print("no available builders or workers")
 						continue
 							
 
-					crafting_error = craft_item("Charcoal", resource_storage_dict, interest_spots_dict, grid, oblivionNPCs)
+					crafting_error = craft_item("Charcoal", resource_storage_dict, interest_spots_dict, grid, oblivionNPCs, design_doc_dict)
 					if crafting_error:
 						if crafting_error == "No kiln":
 							master_task_list.append(("Building kiln", build_building("kiln", resource_storage_dict, interest_spots_dict, discovered_Spots, grid, oblivionNPCs)))
@@ -1531,7 +1543,7 @@ def main(win, width):
 							for npc in oblivionNPCs:
 								if npc.job == "Worker":
 									if npc.current_state == "":
-										go_to_school(npc, grid, "Kiln operator", interest_spots_dict["School"])
+										go_to_school(npc, grid, "Kiln operator", design_doc_dict, interest_spots_dict["School"])
 										break
 							master_task_list.append(("Training kiln operator", npc))
 						elif crafting_error == "No available kiln operator":
@@ -1547,7 +1559,7 @@ def main(win, width):
 			ai_master_timer -= 1
 
 		for npc in oblivionNPCs:
-			npc.update(grid, interest_spots_dict, resource_storage_dict, master_task_list)
+			npc.update(grid, interest_spots_dict, resource_storage_dict, master_task_list, design_doc_dict)
 			if npc.job == "Explorer" or npc.job == "Deep_Explorer":
 				update_dicts(interest_spots_dict, npc, discovered_Spots)
 
