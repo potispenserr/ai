@@ -290,7 +290,7 @@ class NPC:
 				print(self.name, "became a", self.job)
 				if len(master_task_list) > 0:
 					if master_task_list[0][1] == self:
-						print("i'm done with this shit")
+						print(self.name, "i'm done with this")
 						master_task_list.pop(0)
 				
 				if self.job == "Builder":
@@ -1481,7 +1481,7 @@ def main(win, width):
 		draw(win, grid, ROWS, width, oblivionNPCs)
 
 		if resource_storage_dict["Charcoal"] > 200:
-			print("we did it guys")
+			print("we did it")
 			print("Charcoal:", resource_storage_dict["Charcoal"])
 			break
 
@@ -1490,18 +1490,14 @@ def main(win, width):
 			if len(master_task_list) > 0:
 				if crafting_error == "No kiln":
 					if master_task_list[0][0] == "Building kiln":
-						#working_on_it = True
 						print("working on building a kiln from crafting error")
 				elif crafting_error == "No kiln operator":
 					if master_task_list[0][0] == "Training kiln operator":
-						#working_on_it = True
 						print("working on training kiln operator")
 				elif crafting_error == "" or crafting_error == None:
 					if master_task_list[0] == "Producing charcoal":
-						#working_on_it = True
 						print("Working on producing charcoal")
 				elif master_task_list[0][0] == "Building kiln":
-					#working_on_it = True
 					print("just working on a kiln")
 
 					
