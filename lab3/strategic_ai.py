@@ -208,9 +208,6 @@ class NPC:
 	
 
 		grid[self.row][self.col].color = self.color
-
-	def move_to_Spot(self, grid, spot):
-		pass
 		
 	def get_grid_Spot_here(self, grid):
 		return grid[self.row][self.col]
@@ -237,7 +234,7 @@ class NPC:
 			elif(self.job == "Deep_Explorer"):
 				explore_deep(self, grid, self.reverse_deep)
 
-			if(h(self.get_pos(), self.next_Spot.get_pos()) < 1):
+			if(h(self.get_pos(), self.next_Spot.get_pos()) <= 1):
 				#print("Distance to next spot is", h(self.get_pos(), self.next_Spot.get_pos()))
 				self.go_to_Spot_instantly(grid, self.next_Spot)
 				self.previous_Spots.append(self.next_Spot)
