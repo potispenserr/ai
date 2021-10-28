@@ -282,7 +282,7 @@ class NPC:
 
 
 		elif self.current_state == "Going to school":
-			if self.schooling_left <= 1:
+			if self.schooling_left < 1:
 				self.current_state = ""
 				print(self.name, "became a", self.job)
 				if len(master_task_list) > 0:
@@ -661,7 +661,7 @@ class NPC:
 						self.previous_state = "Taking resource to storage"
 						self.current_state = "Moving along path"
 					else:
-						print(item_type, "build timer", self.crafting_timer)
+						print(item_type, "crafting timer", self.crafting_timer)
 						self.crafting_timer -= 1
 				else:
 					if self.inventory == "Iron bar":
@@ -1484,6 +1484,8 @@ def main(win, width):
 
 		if ai_master_timer <= 0:
 			ai_master_timer = 2
+
+			#checks what's next in line in the master_task_list
 			if len(master_task_list) > 0:
 				if crafting_error == "No kiln":
 					if master_task_list[0][0] == "Building kiln":
@@ -1500,7 +1502,6 @@ def main(win, width):
 					
 					
 			else:
-				#working_on_it = False
 				crafting_error = ""
 			
 			for npc in oblivionNPCs:
@@ -1526,28 +1527,27 @@ def main(win, width):
 						else:
 							print("no available builders or workers")
 						continue
-							
-
-					crafting_error = craft_item("Charcoal", resource_storage_dict, interest_spots_dict, grid, oblivionNPCs, design_doc_dict)
-					if crafting_error:
-						if crafting_error == "No kiln":
-							master_task_list.append(("Building kiln", build_building("kiln", resource_storage_dict, interest_spots_dict, discovered_Spots, grid, oblivionNPCs)))
-						elif crafting_error == "No kiln operator":
-							for npc in oblivionNPCs:
-								if npc.job == "Worker":
-									if npc.current_state == "":
-										go_to_school(npc, grid, "Kiln operator", design_doc_dict, interest_spots_dict["School"])
-										break
-							master_task_list.append(("Training kiln operator", npc))
-						elif crafting_error == "No available kiln operator":
-							print("woah chill out man")
-					else:
-						master_task_list.append(("Producing charcoal"))
+				if(len(interest_spots_dict["Kiln"]) >= 5):			
+					if(resource_storage_dict["Wood"] > design_doc_dict["item_recipies"]["Charcoal"]["Wood"]):
+						crafting_error = craft_item("Charcoal", resource_storage_dict, interest_spots_dict, grid, oblivionNPCs, design_doc_dict)
+						if crafting_error:
+							if crafting_error == "No kiln":
+								master_task_list.append(("Building kiln", build_building("kiln", resource_storage_dict, interest_spots_dict, discovered_Spots, grid, oblivionNPCs, design_doc_dict)))
+							elif crafting_error == "No kiln operator":
+								for npc in oblivionNPCs:
+									if npc.job == "Worker":
+										if npc.current_state == "":
+											go_to_school(npc, grid, "Kiln operator", design_doc_dict, interest_spots_dict["School"])
+											break
+								master_task_list.append(("Training kiln operator", npc))
+							elif crafting_error == "No available kiln operator":
+								print("woah chill out man")
+						else:
+							master_task_list.append(("Producing charcoal"))
 					
-				else:
-					if len(interest_spots_dict["Tree"]) > 0:
-						print("going to gather wood")
-						gather_resource("Tree", interest_spots_dict, oblivionNPCs, grid)
+				if len(interest_spots_dict["Tree"]) > 0:
+					print("going to gather wood")
+					gather_resource("Tree", interest_spots_dict, oblivionNPCs, grid)
 		else:
 			ai_master_timer -= 1
 
